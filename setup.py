@@ -3,13 +3,13 @@
 FreeCAD CLI Setup Script
 ========================
 
-安装配置脚本，用于安装 freecad-cli 包。
+Installation configuration script for installing freecad-cli package.
 """
 
 from setuptools import setup, find_packages
 from pathlib import Path
 
-# 读取 README
+# Read README
 readme_file = Path(__file__).parent / "README.md"
 long_description = ""
 if readme_file.exists():

@@ -4,23 +4,23 @@
 FreeCAD CLI Quick Start Examples
 ================================
 
-快速开始示例，展示如何使用 FreeCAD CLI 的各种功能。
+Quick start examples showing how to use various features of FreeCAD CLI.
 """
 
 import sys
 import json
 from pathlib import Path
 
-# 添加包路径
+# Add package path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from freecad_cli import FreeCADWrapper, AICommandParser, BatchProcessor, OutputFormatter
 
 
 def example_basic_part_creation():
-    """基础零件创建示例"""
+    """Basic part creation example"""
     print("\n" + "="*60)
-    print("示例 1: 基础零件创建")
+    print("Example 1: Basic Part Creation")
     print("="*60)
 
     wrapper = FreeCADWrapper(headless=True)
@@ -36,42 +36,42 @@ def example_basic_part_creation():
 
     for name, shape, params in parts:
         result = wrapper.create_part(name, shape, params)
-        print(f"创建 {name}: {'成功' if result.get('success') else '失败'}")
+        print(f"Created {name}: {'Success' if result.get('success') else 'Failed'}")
 
-    # 列出所有零件
+    # List all parts
     objects = wrapper.list_objects()
-    print(f"\n当前文档共有 {len(objects)} 个对象")
+    print(f"\nDocument contains {len(objects)} objects")
 
 
 def example_sketch_creation():
-    """草图创建示例"""
+    """Sketch creation example"""
     print("\n" + "="*60)
-    print("示例 2: 草图创建")
+    print("Example 2: Sketch Creation")
     print("="*60)
 
     wrapper = FreeCADWrapper(headless=True)
     wrapper.initialize()
 
-    # 创建草图
+    # Create sketch
     result = wrapper.create_sketch("MySketch", "XY")
-    print(f"创建草图: {'成功' if result.get('success') else '失败'}")
+    print(f"Created sketch: {'Success' if result.get('success') else 'Failed'}")
 
-    # 添加几何元素
+    # Add geometry elements
     result = wrapper.add_sketch_geometry("MySketch", "Line", {
         "x1": 0, "y1": 0, "x2": 10, "y2": 10
     })
-    print(f"添加直线: {'成功' if result.get('success') else '失败'}")
+    print(f"Added line: {'Success' if result.get('success') else 'Failed'}")
 
     result = wrapper.add_sketch_geometry("MySketch", "Circle", {
         "cx": 5, "cy": 5, "radius": 3
     })
-    print(f"添加圆: {'成功' if result.get('success') else '失败'}")
+    print(f"Added circle: {'Success' if result.get('success') else 'Failed'}")
 
 
 def example_draft_operations():
-    """Draft 操作示例"""
+    """Draft operations example"""
     print("\n" + "="*60)
-    print("示例 3: Draft 绘制操作")
+    print("Example 3: Draft Drawing Operations")
     print("="*60)
 
     wrapper = FreeCADWrapper(headless=True)
@@ -86,73 +86,73 @@ def example_draft_operations():
 
     for name, shape, params in operations:
         result = wrapper.create_draft_object(name, shape, params)
-        print(f"创建 {name}: {'成功' if result.get('success') else '失败'}")
+        print(f"Created {name}: {'Success' if result.get('success') else 'Failed'}")
 
 
 def example_boolean_operations():
-    """布尔运算示例"""
+    """Boolean operations example"""
     print("\n" + "="*60)
-    print("示例 4: 布尔运算")
+    print("Example 4: Boolean Operations")
     print("="*60)
 
     wrapper = FreeCADWrapper(headless=True)
     wrapper.initialize()
 
-    # 创建两个盒子用于布尔运算
+    # Create two boxes for boolean operations
     wrapper.create_part("Box1", "Box", {"length": 10, "width": 10, "height": 10})
     wrapper.create_part("Box2", "Box", {"length": 5, "width": 5, "height": 15})
 
-    # 并集
+    # Union
     result = wrapper.boolean_operation("Union", "Fuse", "Box1", "Box2")
-    print(f"并集运算: {'成功' if result.get('success') else '失败'}")
+    print(f"Union operation: {'Success' if result.get('success') else 'Failed'}")
 
-    # 重新创建用于差集
+    # Recreate for difference operation
     wrapper.create_part("Box3", "Box", {"length": 10, "width": 10, "height": 10})
     wrapper.create_part("Cylinder1", "Cylinder", {"radius": 2, "height": 15})
 
     result = wrapper.boolean_operation("Cut", "Cut", "Box3", "Cylinder1")
-    print(f"差集运算: {'成功' if result.get('success') else '失败'}")
+    print(f"Difference operation: {'Success' if result.get('success') else 'Failed'}")
 
 
 def example_natural_language_parsing():
-    """自然语言解析示例"""
+    """Natural language parsing example"""
     print("\n" + "="*60)
-    print("示例 5: 自然语言命令解析")
+    print("Example 5: Natural Language Command Parsing")
     print("="*60)
 
     parser = AICommandParser()
 
     commands = [
-        "创建一个名为 TestBox 的立方体",
-        "创建一个半径为 5 的球体",
-        "在 XY 平面创建草图",
-        "添加一条直线",
-        "绘制一个六边形",
-        "创建一个墙体",
+        "Create a box named TestBox",
+        "Create a sphere with radius 5",
+        "Create sketch on XY plane",
+        "Add a line",
+        "Draw a hexagon",
+        "Create a wall",
     ]
 
     for cmd in commands:
         result = parser.parse(cmd)
         if result.get("success"):
             print(f"'{cmd}'")
-            print(f"  -> 命令组: {result['command_group']}")
-            print(f"  -> 命令: {result['command']}")
-            print(f"  -> 参数: {result.get('parameters', {})}")
+            print(f"  -> Command group: {result['command_group']}")
+            print(f"  -> Command: {result['command']}")
+            print(f"  -> Parameters: {result.get('parameters', {})}")
         else:
-            print(f"'{cmd}' -> 无法解析")
+            print(f"'{cmd}' -> Unable to parse")
 
 
 def example_batch_processing():
-    """批量处理示例"""
+    """Batch processing example"""
     print("\n" + "="*60)
-    print("示例 6: 批量命令处理")
+    print("Example 6: Batch Command Processing")
     print("="*60)
 
     wrapper = FreeCADWrapper(headless=True)
     processor = BatchProcessor(wrapper)
     wrapper.initialize()
 
-    # 定义批量命令
+    # Define batch commands
     commands = [
         {
             "command_group": "part",
@@ -171,23 +171,23 @@ def example_batch_processing():
         },
     ]
 
-    # 执行批量命令
-    print("执行批量命令...")
+    # Execute batch commands
+    print("Executing batch commands...")
     results = processor.execute_batch(commands)
 
-    # 显示结果摘要
+    # Show result summary
     summary = processor.get_summary()
-    print(f"\n执行完成:")
-    print(f"  总命令数: {summary['total']}")
-    print(f"  成功: {summary['success']}")
-    print(f"  失败: {summary['failed']}")
-    print(f"  成功率: {summary['success_rate']:.1f}%")
+    print(f"\nExecution complete:")
+    print(f"  Total commands: {summary['total']}")
+    print(f"  Success: {summary['success']}")
+    print(f"  Failed: {summary['failed']}")
+    print(f"  Success rate: {summary['success_rate']:.1f}%")
 
 
 def example_output_formatter():
-    """输出格式化示例"""
+    """Output formatter example"""
     print("\n" + "="*60)
-    print("示例 7: 输出格式化")
+    print("Example 7: Output Formatting")
     print("="*60)
 
     formatter = OutputFormatter(output_format="json", pretty=True)
@@ -205,17 +205,17 @@ def example_output_formatter():
         "surface_area": 400
     }
 
-    # 格式化输出
-    print("JSON 格式:")
-    print(formatter.format(data, status="success", message="创建成功"))
+    # Format output
+    print("JSON format:")
+    print(formatter.format(data, status="success", message="Created successfully"))
 
     print("\n" + "-"*40)
-    print("纯文本格式:")
+    print("Plain text format:")
     formatter_text = OutputFormatter(output_format="text", pretty=True)
-    print(formatter_text.format(data, status="success", message="创建成功"))
+    print(formatter_text.format(data, status="success", message="Created successfully"))
 
     print("\n" + "-"*40)
-    print("表格格式:")
+    print("Table format:")
     formatter_table = OutputFormatter(output_format="table", pretty=True)
     table_data = [
         {"name": "Box1", "type": "Box", "volume": 1000},
@@ -226,45 +226,45 @@ def example_output_formatter():
 
 
 def example_export():
-    """导出示例"""
+    """Export example"""
     print("\n" + "="*60)
-    print("示例 8: 导出操作")
+    print("Example 8: Export Operations")
     print("="*60)
 
     wrapper = FreeCADWrapper(headless=True)
     wrapper.initialize()
 
-    # 创建一些对象
+    # Create some objects
     wrapper.create_part("ExportBox", "Box", {"length": 10, "width": 10, "height": 5})
 
-    # 导出为不同格式
+    # Export to different formats
     formats = ["STEP", "STL", "OBJ", "IGES"]
 
     for fmt in formats:
         filepath = f"/tmp/test_model.{fmt.lower()}"
         result = wrapper.export_document(filepath, fmt)
-        status = "成功" if result.get("success") else "失败"
-        print(f"导出 {fmt}: {status}")
+        status = "Success" if result.get("success") else "Failed"
+        print(f"Export {fmt}: {status}")
 
 
 def example_workflow_automation():
-    """工作流自动化示例"""
+    """Workflow automation example"""
     print("\n" + "="*60)
-    print("示例 9: 工作流自动化")
+    print("Example 9: Workflow Automation")
     print("="*60)
 
     from freecad_cli.ai_integration import generate_workflow_commands
 
     workflow = """
-    创建一个名为 BasePlate 的盒子，长度 100，宽度 100，高度 10
-    创建一个名为 Boss 的圆柱，半径 25，高度 20
-    合并 BasePlate 和 Boss，结果命名为 Assembly
-    导出 Assembly 为 STEP 文件到 output/assembly.step
+    Create a box named BasePlate with length 100, width 100, height 10
+    Create a cylinder named Boss with radius 25, height 20
+    Merge BasePlate and Boss, name result Assembly
+    Export Assembly as STEP file to output/assembly.step
     """
 
-    print("输入工作流:")
+    print("Input workflow:")
     print(workflow)
-    print("\n生成的 CLI 命令:")
+    print("\nGenerated CLI commands:")
 
     commands = generate_workflow_commands(workflow)
     for i, cmd in enumerate(commands, 1):
@@ -272,13 +272,13 @@ def example_workflow_automation():
 
 
 def main():
-    """运行所有示例"""
+    """Run all examples"""
     print("="*60)
-    print("FreeCAD CLI 快速开始示例")
+    print("FreeCAD CLI Quick Start Examples")
     print("="*60)
-    print("\n注意: FreeCAD 未安装时，将返回模拟数据进行测试。")
+    print("\nNote: When FreeCAD is not installed, mock data will be returned for testing.")
 
-    # 运行所有示例
+    # Run all examples
     example_basic_part_creation()
     example_sketch_creation()
     example_draft_operations()
@@ -290,7 +290,7 @@ def main():
     example_workflow_automation()
 
     print("\n" + "="*60)
-    print("所有示例执行完成!")
+    print("All examples completed!")
     print("="*60)
 
 
