@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Pytest
+.pytest_cache/
+.coverage
+*.cover
+
+# Build artifacts
+bin/
+build/
+dist/
+*.egg
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Project-specific (should not be committed)
+.claude/
+.context/
+.gstack/
+
+# Lock file
+requirements.lock
