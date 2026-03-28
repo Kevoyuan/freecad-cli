@@ -1,40 +1,40 @@
 # FreeCAD CLI
 
-FreeCAD 命令行接口 - 为 AI 系统提供完整的 FreeCAD CAD 功能访问能力。
+FreeCAD command-line interface — gives AI systems full access to FreeCAD CAD functionality.
 
 [English](README_EN.md) | [中文](README.md)
 
-## 功能特性
+## Features
 
-- **完整 API 覆盖**: 支持 FreeCAD 所有核心模块 (Part, Sketcher, Draft, Arch, Mesh 等)
-- **AI 友好输出**: 原生 JSON/YAML 格式输出，便于 AI 系统解析
-- **自然语言解析**: 支持将自然语言命令转换为结构化 CLI 调用
-- **批量操作**: 支持批量命令执行和事务处理
-- **多格式导出**: 支持 STEP, STL, OBJ, IGES 等主流格式
+- **Complete API Coverage**: Supports all FreeCAD core modules (Part, Sketcher, Draft, Arch, Mesh, etc.)
+- **AI-Friendly Output**: Native JSON/YAML output, easy for AI systems to parse
+- **Natural Language Parsing**: Converts natural language commands into structured CLI calls (Chinese and English)
+- **Batch Operations**: Supports batch command execution with transaction handling
+- **Multi-Format Export**: STEP, STL, OBJ, IGES and other major formats
 
-## 安装
+## Installation
 
-### 前置要求
+### Prerequisites
 
 - Python 3.8+
-- FreeCAD 0.19+ (需要安装 FreeCAD Python 模块)
-- Node.js 16+ (用于 npm 安装)
+- FreeCAD 0.19+ (FreeCAD Python module must be installed)
+- Node.js 16+ (for npm installation)
 
-### npm 安装 (推荐)
+### npm (recommended)
 
 ```bash
 npm install freecad-cli
 npx freecad-cli --help
 ```
 
-### pip 安装
+### pip
 
 ```bash
 pip install freecad-cli
 freecad-cli --help
 ```
 
-### 从源码安装
+### From source
 
 ```bash
 git clone https://github.com/MiniMax-AI/freecad-cli.git
@@ -42,296 +42,296 @@ cd freecad-cli
 pip install -e .
 ```
 
-## 快速开始
+## Quick Start
 
-### 基本命令
+### Basic Commands
 
 ```bash
-# 查看帮助
+# View help
 freecad-cli --help
 
-# 检查 FreeCAD 状态
+# Check FreeCAD status
 freecad-cli info status
 
-# 查看可用模块
+# View available modules
 freecad-cli info modules
 ```
 
-### Part 模块 (零件建模)
+### Part Module (Solid Modeling)
 
 ```bash
-# 创建立方体
+# Create a box
 freecad-cli part create --name MyBox --type Box --params '{"length": 10, "width": 10, "height": 5}'
 
-# 创建圆柱体
+# Create a cylinder
 freecad-cli part create --name MyCylinder --type Cylinder --params '{"radius": 5, "height": 20}'
 
-# 创建球体
+# Create a sphere
 freecad-cli part create --name MySphere --type Sphere --params '{"radius": 8}'
 
-# 列出所有 Part 对象
+# List all Part objects
 freecad-cli part list
 
-# 查看对象信息
+# View object info
 freecad-cli part info --name MyBox
 ```
 
-### Sketch 模块 (草图)
+### Sketch Module
 
 ```bash
-# 创建草图
+# Create a sketch
 freecad-cli sketch create --name MySketch --plane XY
 
-# 添加直线
+# Add a line
 freecad-cli sketch add-line --sketch MySketch --x1 0 --y1 0 --x2 10 --y2 10
 
-# 添加圆
+# Add a circle
 freecad-cli sketch add-circle --sketch MySketch --cx 5 --cy 5 --radius 3
 
-# 列出所有草图
+# List all sketches
 freecad-cli sketch list
 ```
 
-### Draft 模块 (2D 绘制)
+### Draft Module (2D Drawing)
 
 ```bash
-# 创建直线
+# Create a line
 freecad-cli draft line --name MyLine --x1 0 --y1 0 --z1 0 --x2 100 --y2 100 --z2 0
 
-# 创建圆
+# Create a circle
 freecad-cli draft circle --name MyCircle --radius 50
 
-# 创建矩形
+# Create a rectangle
 freecad-cli draft rectangle --name MyRect --length 80 --height 40
 
-# 创建多边形
+# Create a polygon
 freecad-cli draft polygon --name MyHex --sides 6 --radius 30
 ```
 
-### Arch 模块 (建筑)
+### Arch Module (BIM)
 
 ```bash
-# 创建墙体
+# Create a wall
 freecad-cli arch wall --name MainWall --length 500 --width 20 --height 300
 
-# 创建结构
+# Create a structure
 freecad-cli arch structure --name Column --length 50 --width 50 --height 400
 
-# 创建窗户
+# Create a window
 freecad-cli arch window --name Window1 --width 120 --height 150
 ```
 
-### Mesh 模块 (网格)
+### Mesh Module
 
 ```bash
-# 创建规则网格
+# Create a regular mesh
 freecad-cli mesh create --name MyMesh --type RegularMesh --params '{"width": 10, "height": 10}'
 
-# 创建三角形网格
+# Create a triangle mesh
 freecad-cli mesh create --name TriMesh --type Triangle --params '{"points": [[0,0,0], [10,0,0], [5,10,0]]}'
 
-# 从形状创建网格
+# Create mesh from shape
 freecad-cli mesh from-shape --name MeshFromShape --source MyBox --deflection 0.1
 
-# 网格布尔运算 (并集)
+# Mesh boolean (union)
 freecad-cli mesh boolean --name MeshUnion --operation Union --object1 Mesh1 --object2 Mesh2
 
-# 列出所有 Mesh 对象
+# List all mesh objects
 freecad-cli mesh list
 ```
 
-### Surface 模块 (曲面)
+### Surface Module
 
 ```bash
-# 创建填充曲面
+# Create a fill surface
 freecad-cli surface create --name MySurface --type Fill
 
-# 创建扫掠曲面
+# Create a sweep surface
 freecad-cli surface create --name SweepSurface --type Sweep --params '{"sections": ["sketch1", "sketch2"]}'
 
-# 创建放样曲面
+# Create a loft surface
 freecad-cli surface create --name LoftSurface --type Loft --params '{"sections": ["sketch1", "sketch2"]}'
 
-# 创建贝塞尔曲面
+# Create a Bezier surface
 freecad-cli surface create --name BezierSurface --type Bezier
 
-# 从边界创建曲面
+# Create surface from edges
 freecad-cli surface from-edges --name SurfaceFromEdges --sketch MySketch
 ```
 
-### PartDesign 模块 (零件设计)
+### PartDesign Module
 
 ```bash
-# 创建 Body
+# Create a Body
 freecad-cli partdesign create-body --name MyBody
 
-# 创建 Pad (拉伸)
+# Create a Pad (extrusion)
 freecad-cli partdesign pad --name MyPad --body MyBody --sketch MySketch --length 20
 
-# 创建 Pocket (切除)
+# Create a Pocket (cutout)
 freecad-cli partdesign pocket --name MyPocket --body MyBody --sketch MySketch --length 10
 
-# 创建孔
+# Create a hole
 freecad-cli partdesign hole --name MyHole --body MyBody --diameter 5 --depth 15
 
-# 创建旋转体
+# Create a revolution
 freecad-cli partdesign revolution --name MyRevolution --body MyBody --sketch MySketch --angle 360
 
-# 创建旋转切除 (Groove)
+# Create a groove (rotational cutout)
 freecad-cli partdesign groove --name MyGroove --body MyBody --angle 360 --radius 10
 
-# 创建圆角
+# Create a fillet
 freecad-cli partdesign fillet --name MyFillet --body MyBody --radius 2
 
-# 创建倒角
+# Create a chamfer
 freecad-cli partdesign chamfer --name MyChamfer --body MyBody --size 1
 ```
 
-### TechDraw 模块 (工程图)
+### TechDraw Module (Engineering Drawings)
 
 ```bash
-# 创建工程图页面
+# Create a drawing page
 freecad-cli techdraw create-page --name DrawPage --template A4_Landscape
 
-# 添加视图
+# Add a view
 freecad-cli techdraw add-view --page DrawPage --source MyPart --projection FirstAngle
 
-# 添加尺寸标注
+# Add a dimension
 freecad-cli techdraw add-dimension --view View --type Horizontal
 
-# 导出工程图
+# Export drawing
 freecad-cli techdraw export --page DrawPage --filepath output/drawing.pdf --format PDF
 ```
 
-### Spreadsheet 模块 (电子表格)
+### Spreadsheet Module
 
 ```bash
-# 创建电子表格
+# Create a spreadsheet
 freecad-cli spreadsheet create --name Params
 
-# 设置单元格值
+# Set cell value
 freecad-cli spreadsheet set-cell --sheet Params --cell A1 --value 10
 
-# 设置公式
+# Set formula
 freecad-cli spreadsheet set-formula --sheet Params --cell B1 --formula "=A1*2"
 
-# 链接到对象属性
+# Link to object property
 freecad-cli spreadsheet link --sheet Params --object MyBox --property Length --cell A1
 ```
 
-### Assembly 模块 (装配)
+### Assembly Module
 
 ```bash
-# 创建装配
+# Create an assembly
 freecad-cli assembly create --name MyAssembly
 
-# 添加零件
+# Add a part
 freecad-cli assembly add-part --assembly MyAssembly --part Part1 --placement [0,0,0]
 
-# 添加约束
+# Add a constraint
 freecad-cli assembly add-constraint --assembly MyAssembly --type Coincident --object1 Part1 --object2 Part2
 ```
 
-### Path 模块 (CAM 加工)
+### Path Module (CAM)
 
 ```bash
-# 创建加工任务
+# Create a machining job
 freecad-cli path create-job --name Job1 --base MyPart
 
-# 添加操作
+# Add an operation
 freecad-cli path add-operation --job Job1 --type Drill
 
-# 导出 G-code
+# Export G-code
 freecad-cli path export-gcode --job Job1 --filepath output/gcode.nc --post linuxcnc
 ```
 
-### FEM 模块 (有限元分析)
+### FEM Module (Finite Element Analysis)
 
 ```bash
-# 创建分析
+# Create an analysis
 freecad-cli fem create-analysis --name Analysis --type static
 
-# 添加材料
+# Add material
 freecad-cli fem add-material --analysis Analysis --material Steel
 
-# 添加边界条件
+# Add boundary condition
 freecad-cli fem add-bc --analysis Analysis --type Fixed --object MyPart
 
-# 运行分析
+# Run analysis
 freecad-cli fem run --analysis Analysis
 ```
 
-### Image 模块 (图像)
+### Image Module
 
 ```bash
-# 导入图像
+# Import an image
 freecad-cli image import --name MyImage --filepath photo.png
 
-# 缩放图像
+# Scale image
 freecad-cli image scale --name MyImage --x 2.0 --y 2.0
 ```
 
-### Material 模块 (材料)
+### Material Module
 
 ```bash
-# 创建材料
+# Create a material
 freecad-cli material create --name CustomSteel --density 7850 --youngs 210000 --poisson 0.3
 
-# 获取标准材料
+# Get standard material
 freecad-cli material get-standard --name Steel
 ```
 
-### Inspection 模块 (检测)
+### Inspection Module
 
 ```bash
-# 创建检测
+# Create an inspection
 freecad-cli inspection create-check --name Check1 --object MyPart
 
-# 测量距离
+# Measure distance
 freecad-cli inspection measure-distance --object1 Part1 --object2 Part2
 ```
 
-### 布尔运算
+### Boolean Operations
 
 ```bash
-# 并集 (合并)
+# Union (merge)
 freecad-cli boolean fuse --name Union --object1 Box1 --object2 Box2
 
-# 差集 (减去)
+# Cut (difference)
 freecad-cli boolean cut --name Cut --object1 Box1 --object2 Cylinder1
 
-# 交集 (共同部分)
+# Common (intersection)
 freecad-cli boolean common --name Common --object1 Box1 --object2 Sphere1
 
-# 截面
+# Section
 freecad-cli boolean section --name Section --object1 Box1 --object2 Plane1
 ```
 
-### 导出
+### Export
 
 ```bash
-# 导出为 STEP
+# Export as STEP
 freecad-cli export step --filepath output/model.step
 
-# 导出为 STL
+# Export as STL
 freecad-cli export stl --filepath output/model.stl
 
-# 导出为 OBJ
+# Export as OBJ
 freecad-cli export obj --filepath output/model.obj
 
-# 导出为 IGES
+# Export as IGES
 freecad-cli export iges --filepath output/model.iges
 ```
 
-## 输出格式
+## Output Formats
 
-### JSON 格式 (默认)
+### JSON (default)
 
 ```json
 {
   "status": "success",
   "timestamp": "2024-01-15T10:30:00",
-  "message": "Part 'MyBox' 创建成功",
+  "message": "Part 'MyBox' created successfully",
   "data": {
     "name": "MyBox",
     "type": "Box",
@@ -348,41 +348,41 @@ freecad-cli export iges --filepath output/model.iges
 }
 ```
 
-### 其他格式
+### Other Formats
 
 ```bash
-# YAML 格式
+# YAML format
 freecad-cli --format yaml part create --name MyBox --type Box
 
-# 表格格式
+# Table format
 freecad-cli --format table object list
 
-# 纯文本格式
+# Plain text
 freecad-cli --format text info status
 ```
 
-## AI 集成
+## AI Integration
 
 ### Python API
 
 ```python
 from freecad_cli import FreeCADWrapper, AICommandParser
 
-# 初始化
+# Initialize
 wrapper = FreeCADWrapper(headless=True)
 wrapper.initialize()
 
-# 创建对象
+# Create objects
 result = wrapper.create_part("MyBox", "Box", {"length": 10, "width": 10, "height": 5})
 print(result)
 
-# 自然语言解析
+# Natural language parsing
 parser = AICommandParser()
-result = parser.parse("创建一个名为 TestBox 的立方体")
+result = parser.parse("Create a cube named TestBox")
 print(result)  # {'command_group': 'part', 'command': 'create', 'parameters': {...}}
 ```
 
-### 批量操作
+### Batch Operations
 
 ```python
 from freecad_cli import FreeCADWrapper, BatchProcessor
@@ -399,70 +399,68 @@ commands = [
 
 results = processor.execute_batch(commands)
 summary = processor.get_summary()
-print(f"成功: {summary['success']}/{summary['total']}")
+print(f"Success: {summary['success']}/{summary['total']}")
 ```
 
-## 架构
+## Architecture
 
 ```
 freecad_cli/
-├── __init__.py                # 包初始化
-├── core.py                    # 主 CLI 入口和命令定义
-├── formatter.py               # 输出格式化工具 (JSON/YAML/text/table)
-├── freecad_integration.py     # FreeCAD API 包装器 (核心)
-├── ai_integration.py          # AI 集成模块 (NL 解析)
-├── decorators.py              # 装饰器和 NonEmptyString 验证
-├── _mock.py                   # Mock 状态跟踪 (测试用)
-├── _part.py                   # Part 模块 (Box, Cylinder, Sphere, ...)
-├── _sketch.py                 # Sketch 模块 (草图、几何)
-├── _draft.py                  # Draft 模块 (2D 绘制)
-├── _arch.py                   # Arch 模块 (建筑信息模型)
-├── _boolean.py                # Boolean 模块 (Fuse, Cut, Common, ...)
-├── _mesh.py                   # Mesh 模块 (网格处理)
-├── _surface.py                # Surface 模块 (曲面建模)
-├── _partdesign.py             # PartDesign 模块 (Pad, Pocket, Hole, ...)
-├── _export.py                 # Export 模块 (STEP, STL, OBJ, ...)
-├── _techdraw.py               # TechDraw 模块 (工程图)
-├── _spreadsheet.py            # Spreadsheet 模块 (电子表格)
-├── _assembly.py               # Assembly 模块 (装配管理)
-├── _path.py                   # Path 模块 (CAM 加工)
-├── _fem.py                    # FEM 模块 (有限元分析)
-├── _image.py                  # Image 模块 (图像处理)
-├── _material.py               # Material 模块 (材料管理)
-├── _inspection.py             # Inspection 模块 (检测测量)
-└── __main__.py                # 直接运行入口
+├── __init__.py                # Package init
+├── core.py                    # Main CLI entry and command definitions
+├── formatter.py               # Output formatter (JSON/YAML/text/table)
+├── freecad_integration.py      # FreeCAD API wrapper (core)
+├── ai_integration.py           # AI integration (NL parsing)
+├── decorators.py               # Decorators and NonEmptyString validator
+├── _mock.py                  # Mock state tracking (for testing)
+├── _part.py                  # Part module (Box, Cylinder, Sphere, ...)
+├── _sketch.py                # Sketch module (sketches, geometry)
+├── _draft.py                 # Draft module (2D drawing)
+├── _arch.py                  # Arch module (BIM)
+├── _boolean.py               # Boolean module (Fuse, Cut, Common, ...)
+├── _mesh.py                  # Mesh module
+├── _surface.py               # Surface module
+├── _partdesign.py            # PartDesign module (Pad, Pocket, Hole, ...)
+├── _export.py                # Export module (STEP, STL, OBJ, ...)
+├── _techdraw.py              # TechDraw module (engineering drawings)
+├── _spreadsheet.py           # Spreadsheet module
+├── _assembly.py              # Assembly module
+├── _path.py                  # Path module (CAM)
+├── _fem.py                   # FEM module (finite element analysis)
+├── _image.py                 # Image module
+├── _material.py              # Material module
+├── _inspection.py            # Inspection module
+└── __main__.py              # Direct execution entry
 ```
 
-## 支持的模块
+## Supported Modules
 
-| 模块 | 功能 | 状态 |
-|------|------|------|
-| Part | 零件建模、基础几何体 | ✅ |
-| Sketcher | 2D 约束草图 | ✅ |
-| Draft | 2D 绘制和注释 | ✅ |
-| Arch | 建筑信息模型 (BIM) | ✅ |
-| Mesh | 网格处理 | ✅ |
-| Surface | 曲面建模 | ✅ |
-| PartDesign | 零件设计 | ✅ |
-| TechDraw | 工程图、技术标注 | ✅ |
-| Spreadsheet | 电子表格、参数化 | ✅ |
-| Assembly | 装配管理 | ✅ |
-| Path | CAM 加工路径 | ✅ |
-| FEM | 有限元分析 | ✅ |
-| Image | 图像处理 | ✅ |
-| Material | 材料管理 | ✅ |
-| Inspection | 检测和测量 | ✅ |
+| Module | Function | Status |
+|--------|----------|--------|
+| Part | Solid modeling, basic geometry | ✅ |
+| Sketcher | 2D constrained sketches | ✅ |
+| Draft | 2D drawing and annotation | ✅ |
+| Arch | Building Information Modeling (BIM) | ✅ |
+| Mesh | Mesh processing | ✅ |
+| Surface | Surface modeling | ✅ |
+| PartDesign | Part design | ✅ |
+| TechDraw | Engineering drawings | ✅ |
+| Spreadsheet | Spreadsheets, parametric | ✅ |
+| Assembly | Assembly management | ✅ |
+| Path | CAM machining paths | ✅ |
+| FEM | Finite element analysis | ✅ |
+| Image | Image processing | ✅ |
+| Material | Material management | ✅ |
+| Inspection | Inspection and measurement | ✅ |
 
-**图例**: ✅ 已完成 🔄 开发中 📋 计划中
+## Contributing
 
-## 贡献
+Issues and Pull Requests are welcome!
 
-欢迎提交 Issue 和 Pull Request！
-
-## 许可证
+## License
 
 LGPL 2.1+
 
-## 联系方式
+## Contact
 
 - GitHub Issues: https://github.com/MiniMax-AI/freecad-cli/issues
