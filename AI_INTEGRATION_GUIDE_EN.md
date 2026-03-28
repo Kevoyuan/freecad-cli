@@ -130,6 +130,8 @@ parser.parse("Create a wall")
 
 ### Supported Natural Language Patterns
 
+> English natural language patterns are fully supported for all command groups.
+
 | Input | Parsed Result |
 |-------|---------------|
 | "Create box" | part create Box |

@@ -130,6 +130,8 @@ parser.parse("创建一堵墙")
 
 ### 支持的自然语言模式
 
+> AI 集成同时支持中文和英文自然语言输入。
+
 | 输入 | 解析结果 |
 |------|----------|
 | "创建盒子" | part create Box |
@@ -144,6 +146,9 @@ parser.parse("创建一堵墙")
 | "合并对象" | boolean fuse |
 | "减去对象" | boolean cut |
 | "导出 STEP" | export step |
+| 英文 "create box" | part create Box |
+| 英文 "add cylinder" | part create Cylinder |
+| 英文 "make sphere" | part create Sphere |
 
 ---
 

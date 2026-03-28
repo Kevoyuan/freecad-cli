@@ -2,7 +2,7 @@
 
 FreeCAD 命令行接口 - 为 AI 系统提供完整的 FreeCAD CAD 功能访问能力。
 
-[English](README.md) | [简体中文](README_zh-CN.md)
+[English](README.md)
 
 ## 功能特性
 
@@ -406,12 +406,31 @@ print(f"成功: {summary['success']}/{summary['total']}")
 
 ```
 freecad_cli/
-├── __init__.py           # 包初始化
-├── core.py               # 主 CLI 入口和命令定义
-├── formatter.py          # 输出格式化工具
-├── freecad_integration.py # FreeCAD API 包装器
-├── ai_integration.py     # AI 集成模块
-└── __main__.py           # 直接运行入口
+├── __init__.py                # 包初始化
+├── core.py                    # 主 CLI 入口和命令定义
+├── formatter.py               # 输出格式化工具 (JSON/YAML/text/table)
+├── freecad_integration.py     # FreeCAD API 包装器 (核心)
+├── ai_integration.py          # AI 集成模块 (NL 解析)
+├── decorators.py              # 装饰器和 NonEmptyString 验证
+├── _mock.py                   # Mock 状态跟踪 (测试用)
+├── _part.py                   # Part 模块 (Box, Cylinder, Sphere, ...)
+├── _sketch.py                 # Sketch 模块 (草图、几何)
+├── _draft.py                  # Draft 模块 (2D 绘制)
+├── _arch.py                   # Arch 模块 (建筑信息模型)
+├── _boolean.py                # Boolean 模块 (Fuse, Cut, Common, ...)
+├── _mesh.py                   # Mesh 模块 (网格处理)
+├── _surface.py                # Surface 模块 (曲面建模)
+├── _partdesign.py             # PartDesign 模块 (Pad, Pocket, Hole, ...)
+├── _export.py                 # Export 模块 (STEP, STL, OBJ, ...)
+├── _techdraw.py               # TechDraw 模块 (工程图)
+├── _spreadsheet.py            # Spreadsheet 模块 (电子表格)
+├── _assembly.py               # Assembly 模块 (装配管理)
+├── _path.py                   # Path 模块 (CAM 加工)
+├── _fem.py                    # FEM 模块 (有限元分析)
+├── _image.py                  # Image 模块 (图像处理)
+├── _material.py               # Material 模块 (材料管理)
+├── _inspection.py             # Inspection 模块 (检测测量)
+└── __main__.py                # 直接运行入口
 ```
 
 ## 支持的模块
