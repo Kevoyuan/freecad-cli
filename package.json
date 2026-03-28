@@ -1,0 +1,42 @@
+{
+  "name": "freecad-cli",
+  "version": "1.0.0",
+  "description": "FreeCAD Command Line Interface - AI-friendly CAD automation",
+  "main": "index.js",
+  "bin": {
+    "freecad-cli": "./bin/freecad-cli.js"
+  },
+  "scripts": {
+    "install": "node scripts/install.js",
+    "postinstall": "node scripts/postinstall.js",
+    "test": "python -m pytest tests/ -v",
+    "start": "python -m freecad_cli",
+    "benchmark": "node scripts/benchmark.js"
+  },
+  "keywords": [
+    "freecad",
+    "cad",
+    "cli",
+    "3d",
+    "modeling",
+    "ai"
+  ],
+  "author": "MiniMax Agent",
+  "license": "LGPL-2.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MiniMax-AI/freecad-cli"
+  },
+  "bugs": {
+    "url": "https://github.com/MiniMax-AI/freecad-cli/issues"
+  },
+  "homepage": "https://github.com/MiniMax-AI/freecad-cli#readme",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "optionalDependencies": {
+    "python-installed": "npm:python-wrapper@*"
+  }
+}
