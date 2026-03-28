@@ -32,41 +32,41 @@ class AICommandParser:
     # Command template library
     COMMAND_TEMPLATES = {
         # Part related
-        r"创建.*?(box|立方体)" : ("part", "create", {"type": "Box"}),
-        r"创建.*?圆柱" : ("part", "create", {"type": "Cylinder"}),
-        r"创建.*?球" : ("part", "create", {"type": "Sphere"}),
-        r"创建.*?圆锥" : ("part", "create", {"type": "Cone"}),
-        r"创建.*?圆环" : ("part", "create", {"type": "Torus"}),
+        r"创建.*?(box|立方体)|(make|create|add).*?(box|part)" : ("part", "create", {"type": "Box"}),
+        r"创建.*?圆柱|(make|create|add).*?cylinder" : ("part", "create", {"type": "Cylinder"}),
+        r"创建.*?球|(make|create|add).*?sphere" : ("part", "create", {"type": "Sphere"}),
+        r"创建.*?圆锥|(make|create|add).*?cone" : ("part", "create", {"type": "Cone"}),
+        r"创建.*?圆环|(make|create|add).*?torus" : ("part", "create", {"type": "Torus"}),
 
         # Sketch related
-        r"创建.*?草图" : ("sketch", "create", {}),
-        r"添加.*?直线" : ("sketch", "add-line", {}),
-        r"添加.*?圆" : ("sketch", "add-circle", {}),
+        r"创建.*?草图|(make|create|add).*?sketch" : ("sketch", "create", {}),
+        r"添加.*?直线|add.*?line" : ("sketch", "add-line", {}),
+        r"添加.*?圆|add.*?circle" : ("sketch", "add-circle", {}),
 
         # Draft related
-        r"绘制.*?线" : ("draft", "line", {}),
-        r"绘制.*?圆" : ("draft", "circle", {}),
-        r"绘制.*?矩形" : ("draft", "rectangle", {}),
-        r"绘制.*?多边形" : ("draft", "polygon", {}),
+        r"绘制.*?线|draw.*?line" : ("draft", "line", {}),
+        r"绘制.*?圆|draw.*?circle" : ("draft", "circle", {}),
+        r"绘制.*?矩形|draw.*?rectangle" : ("draft", "rectangle", {}),
+        r"绘制.*?多边形|draw.*?polygon" : ("draft", "polygon", {}),
 
         # Arch related
-        r"创建.*?墙" : ("arch", "wall", {}),
-        r"创建.*?结构" : ("arch", "structure", {}),
-        r"创建.*?窗户" : ("arch", "window", {}),
+        r"创建.*?墙|(make|create|add).*?wall" : ("arch", "wall", {}),
+        r"创建.*?结构|(make|create|add).*?structure" : ("arch", "structure", {}),
+        r"创建.*?窗户|(make|create|add).*?window" : ("arch", "window", {}),
 
         # Boolean operations
-        r"并集|合并" : ("boolean", "fuse", {}),
-        r"差集|减去" : ("boolean", "cut", {}),
-        r"交集|共同" : ("boolean", "common", {}),
+        r"并集|合并|union|merge|fuse" : ("boolean", "fuse", {}),
+        r"差集|减去|difference|subtract|cut" : ("boolean", "cut", {}),
+        r"交集|共同|intersection|common" : ("boolean", "common", {}),
 
         # Export
-        r"导出.*?step" : ("export", "step", {}),
-        r"导出.*?stl" : ("export", "stl", {}),
-        r"导出.*?obj" : ("export", "obj", {}),
+        r"导出.*?step|export.*?step" : ("export", "step", {}),
+        r"导出.*?stl|export.*?stl" : ("export", "stl", {}),
+        r"导出.*?obj|export.*?obj" : ("export", "obj", {}),
 
         # Info
-        r"列出.*?对象" : ("object", "list", {}),
-        r"删除.*?" : ("object", "delete", {}),
+        r"列出.*?对象|list.*?objects?" : ("object", "list", {}),
+        r"删除.*?|delete|remove" : ("object", "delete", {}),
     }
 
     def __init__(self):
