@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-AI Integration Module - AI 集成模块
-====================================
+AI Integration Module
+=====================
 
-提供 AI 友好的接口，包括：
-- 自然语言命令解析
-- 命令历史记录
-- 批量操作支持
-- 自动补全生成
+Provides AI-friendly interfaces including:
+- Natural language command parsing
+- Command history tracking
+- Batch operation support
+- Auto-completion generation
 """
 
 import json
@@ -18,7 +18,7 @@ from dataclasses import dataclass, asdict
 
 @dataclass
 class CommandSpec:
-    """命令规范类"""
+    """Command specification class"""
     command: str
     description: str
     parameters: Dict[str, Dict[str, Any]]
@@ -27,34 +27,34 @@ class CommandSpec:
 
 
 class AICommandParser:
-    """AI 命令解析器 - 将自然语言转换为 CLI 命令"""
+    """AI command parser - converts natural language to CLI commands"""
 
-    # 命令模板库
+    # Command template library
     COMMAND_TEMPLATES = {
-        # Part 相关
+        # Part related
         r"创建.*?(box|立方体)" : ("part", "create", {"type": "Box"}),
         r"创建.*?圆柱" : ("part", "create", {"type": "Cylinder"}),
         r"创建.*?球" : ("part", "create", {"type": "Sphere"}),
         r"创建.*?圆锥" : ("part", "create", {"type": "Cone"}),
         r"创建.*?圆环" : ("part", "create", {"type": "Torus"}),
 
-        # Sketch 相关
+        # Sketch related
         r"创建.*?草图" : ("sketch", "create", {}),
         r"添加.*?直线" : ("sketch", "add-line", {}),
         r"添加.*?圆" : ("sketch", "add-circle", {}),
 
-        # Draft 相关
+        # Draft related
         r"绘制.*?线" : ("draft", "line", {}),
         r"绘制.*?圆" : ("draft", "circle", {}),
         r"绘制.*?矩形" : ("draft", "rectangle", {}),
         r"绘制.*?多边形" : ("draft", "polygon", {}),
 
-        # Arch 相关
+        # Arch related
         r"创建.*?墙" : ("arch", "wall", {}),
         r"创建.*?结构" : ("arch", "structure", {}),
         r"创建.*?窗户" : ("arch", "window", {}),
 
-        # Boolean 操作
+        # Boolean operations
         r"并集|合并" : ("boolean", "fuse", {}),
         r"差集|减去" : ("boolean", "cut", {}),
         r"交集|共同" : ("boolean", "common", {}),
@@ -74,13 +74,13 @@ class AICommandParser:
 
     def parse(self, natural_language: str) -> Dict[str, Any]:
         """
-        将自然语言解析为结构化命令
+        Parse natural language into structured command
 
         Args:
-            natural_language: 自然语言输入
+            natural_language: Natural language input
 
         Returns:
-            解析后的命令字典
+            Parsed command dictionary
         """
         nl = natural_language.lower()
 
@@ -94,24 +94,24 @@ class AICommandParser:
                     "raw_input": natural_language
                 }
 
-                # 提取参数
+                # Extract parameters
                 self._extract_parameters(nl, result["parameters"])
 
-                # 添加到历史
+                # Add to history
                 self.command_history.append(result)
 
                 return result
 
         return {
             "success": False,
-            "error": "无法解析命令",
+            "error": "Unable to parse command",
             "raw_input": natural_language,
-            "suggestion": "请使用明确的命令，如: '创建盒子' 或 '绘制圆形'"
+            "suggestion": "Please use explicit commands like: 'create box' or 'draw circle'"
         }
 
     def _extract_parameters(self, text: str, params: Dict):
-        """从文本中提取参数"""
-        # 提取尺寸参数
+        """Extract parameters from text"""
+        # Extract size parameters
         size_patterns = [
             (r"长\s*(\d+\.?\d*)", "length"),
             (r"宽\s*(\d+\.?\d*)", "width"),
@@ -125,7 +125,7 @@ class AICommandParser:
             if match:
                 params[param_name] = float(match.group(1))
 
-        # 提取名称
+        # Extract name
         name_patterns = [
             r"名[称叫]([a-zA-Z0-9_]+)",
             r"叫\s*([a-zA-Z0-9_]+)",
@@ -136,14 +136,14 @@ class AICommandParser:
                 params["name"] = match.group(1)
                 break
 
-        # 提取边数
+        # Extract number of sides
         sides_match = re.search(r"(\d+)\s*[边角]", text)
         if sides_match:
             params["sides"] = int(sides_match.group(1))
 
 
 class BatchProcessor:
-    """批量命令处理器"""
+    """Batch command processor"""
 
     def __init__(self, wrapper):
         self.wrapper = wrapper
@@ -151,13 +151,13 @@ class BatchProcessor:
 
     def execute_batch(self, commands: List[Dict]) -> List[Dict]:
         """
-        批量执行命令
+        Execute commands in batch
 
         Args:
-            commands: 命令列表
+            commands: List of commands
 
         Returns:
-            执行结果列表
+            List of execution results
         """
         results = []
 
@@ -200,7 +200,7 @@ class BatchProcessor:
                         params
                     )
                 else:
-                    result = {"success": False, "error": f"未知命令组: {group}"}
+                    result = {"success": False, "error": f"Unknown command group: {group}"}
 
                 results.append(result)
             except Exception as e:
@@ -210,7 +210,7 @@ class BatchProcessor:
         return results
 
     def get_summary(self) -> Dict[str, Any]:
-        """获取批量执行摘要"""
+        """Get batch execution summary"""
         if not self.results:
             return {"total": 0, "success": 0, "failed": 0}
 
@@ -224,22 +224,22 @@ class BatchProcessor:
 
 
 class CommandGenerator:
-    """命令生成器 - 根据需求生成 CLI 命令"""
+    """Command generator - generates CLI commands from requirements"""
 
     @staticmethod
     def generate_part_command(name: str, shape: str, **kwargs) -> str:
-        """生成 Part 命令"""
+        """Generate Part command"""
         params = json.dumps(kwargs, ensure_ascii=False)
         return f'freecad-cli part create --name "{name}" --type {shape} --params \'{params}\''
 
     @staticmethod
     def generate_sketch_command(name: str, plane: str = "XY") -> str:
-        """生成 Sketch 命令"""
+        """Generate Sketch command"""
         return f'freecad-cli sketch create --name "{name}" --plane {plane}'
 
     @staticmethod
     def generate_draft_command(draft_type: str, name: str, **kwargs) -> str:
-        """生成 Draft 命令"""
+        """Generate Draft command"""
         parts = [f'freecad-cli draft {draft_type.lower()} --name "{name}"']
         for key, value in kwargs.items():
             parts.append(f"--{key} {value}")
@@ -248,28 +248,28 @@ class CommandGenerator:
     @staticmethod
     def generate_boolean_command(operation: str, name: str,
                                  obj1: str, obj2: str) -> str:
-        """生成布尔运算命令"""
+        """Generate boolean operation command"""
         return f'freecad-cli boolean {operation.lower()} --name "{name}" --object1 {obj1} --object2 {obj2}'
 
     @staticmethod
     def generate_export_command(format_type: str, filepath: str) -> str:
-        """生成导出命令"""
+        """Generate export command"""
         return f'freecad-cli export {format_type.lower()} --filepath "{filepath}"'
 
 
 def generate_workflow_commands(workflow: str) -> List[str]:
     """
-    根据工作流描述生成命令列表
+    Generate command list from workflow description
 
     Args:
-        workflow: 工作流描述
+        workflow: Workflow description
 
     Returns:
-        CLI 命令列表
+        List of CLI commands
     """
     commands = []
 
-    # 解析工作流
+    # Parse workflow
     lines = workflow.strip().split('\n')
 
     for line in lines:
@@ -301,7 +301,7 @@ def generate_workflow_commands(workflow: str) -> List[str]:
                     **result["parameters"]
                 )
             else:
-                cmd = f"# {line} (未识别)"
+                cmd = f"# {line} (unrecognized)"
 
             commands.append(cmd)
 

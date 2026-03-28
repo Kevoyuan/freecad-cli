@@ -14,15 +14,15 @@ from datetime import datetime
 
 
 class OutputFormatter:
-    """格式化输出工具类 - 支持多种输出格式"""
+    """Output formatter - supports multiple output formats"""
 
     def __init__(self, output_format: str = "json", pretty: bool = True):
         """
-        初始化格式化器
+        Initialize formatter
 
         Args:
-            output_format: 输出格式 (json/yaml/text/table)
-            pretty: 是否美化输出
+            output_format: Output format (json/yaml/text/table)
+            pretty: Whether to beautify output
         """
         self.output_format = output_format
         self.pretty = pretty
@@ -31,16 +31,16 @@ class OutputFormatter:
     def format(self, data: Any, status: str = "success",
                message: str = "", metadata: Optional[Dict] = None) -> str:
         """
-        格式化输出数据
+        Format output data
 
         Args:
-            data: 要格式化的数据
-            status: 操作状态 (success/error/warning)
-            message: 附加消息
-            metadata: 元数据
+            data: Data to format
+            status: Operation status (success/error/warning)
+            message: Additional message
+            metadata: Metadata
 
         Returns:
-            格式化后的字符串
+            Formatted string
         """
         wrapper = {
             "status": status,
@@ -64,13 +64,13 @@ class OutputFormatter:
             return str(data)
 
     def _format_json(self, data: Dict) -> str:
-        """JSON 格式化"""
+        """JSON formatting"""
         if self.pretty:
             return json.dumps(data, indent=self._indent, ensure_ascii=False, default=str)
         return json.dumps(data, ensure_ascii=False, default=str)
 
     def _format_yaml(self, data: Dict) -> str:
-        """YAML 格式化 (简化实现)"""
+        """YAML formatting (simplified implementation)"""
         lines = []
         for key, value in data.items():
             if isinstance(value, dict):
@@ -86,16 +86,16 @@ class OutputFormatter:
         return "\n".join(lines)
 
     def _format_text(self, data: Dict) -> str:
-        """纯文本格式化"""
-        lines = [f"状态: {data['status']}", f"时间: {data['timestamp']}"]
+        """Plain text formatting"""
+        lines = [f"Status: {data['status']}", f"Time: {data['timestamp']}"]
         if data.get("message"):
-            lines.append(f"消息: {data['message']}")
-        lines.append(f"\n数据:")
+            lines.append(f"Message: {data['message']}")
+        lines.append(f"\nData:")
         lines.append(self._dict_to_text(data.get("data", {}), indent=0))
         return "\n".join(lines)
 
     def _format_table(self, data: Any) -> str:
-        """表格格式化"""
+        """Table formatting"""
         if isinstance(data, list) and data and isinstance(data[0], dict):
             keys = list(data[0].keys())
             col_widths = {k: len(k) for k in keys}
@@ -116,7 +116,7 @@ class OutputFormatter:
         return str(data)
 
     def _dict_to_text(self, data: Any, indent: int = 0) -> str:
-        """递归转换为缩进文本"""
+        """Recursively convert to indented text"""
         lines = []
         prefix = "  " * indent
 
@@ -137,7 +137,7 @@ class OutputFormatter:
         return "\n".join(lines)
 
     def error(self, message: str, error_details: Any = None) -> str:
-        """格式化错误输出"""
+        """Format error output"""
         data = {
             "error": message,
             "details": error_details
@@ -145,23 +145,23 @@ class OutputFormatter:
         return self.format(data, status="error", message=message)
 
     def success(self, data: Any, message: str = "") -> str:
-        """格式化成功输出"""
+        """Format success output"""
         return self.format(data, status="success", message=message)
 
     def warning(self, data: Any, message: str = "") -> str:
-        """格式化警告输出"""
+        """Format warning output"""
         return self.format(data, status="warning", message=message)
 
 
 def get_formatter(format_type: str = "json", pretty: bool = True) -> OutputFormatter:
     """
-    获取格式化器实例
+    Get formatter instance
 
     Args:
-        format_type: 输出格式类型
-        pretty: 是否美化输出
+        format_type: Output format type
+        pretty: Whether to beautify output
 
     Returns:
-        OutputFormatter 实例
+        OutputFormatter instance
     """
     return OutputFormatter(output_format=format_type, pretty=pretty)

@@ -14,32 +14,32 @@ License: LGPL 2.1+
 __version__ = "1.0.0"
 __author__ = "MiniMax Agent"
 
-# 核心 CLI
+# Core CLI
 from .core import cli
 
-# 格式化器
+# Formatter
 from .formatter import OutputFormatter, get_formatter
 
-# FreeCAD 集成
+# FreeCAD integration
 from .freecad_integration import FreeCADWrapper, get_wrapper, check_freecad
 
-# AI 集成
+# AI integration
 from .ai_integration import AICommandParser, BatchProcessor, CommandGenerator
 
 __all__ = [
-    # 核心
+    # Core
     "cli",
 
-    # 格式化
+    # Formatter
     "OutputFormatter",
     "get_formatter",
 
-    # FreeCAD 集成
+    # FreeCAD integration
     "FreeCADWrapper",
     "get_wrapper",
     "check_freecad",
 
-    # AI 集成
+    # AI integration
     "AICommandParser",
     "BatchProcessor",
     "CommandGenerator",

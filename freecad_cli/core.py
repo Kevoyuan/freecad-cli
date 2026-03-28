@@ -3,19 +3,19 @@
 FreeCAD CLI - Main Command Line Interface
 ==========================================
 
-FreeCAD 完整的命令行接口，提供对所有 FreeCAD Python API 的命令行访问。
-支持 AI 系统通过结构化命令调用 FreeCAD 的所有 CAD 功能。
+FreeCAD's complete command line interface providing command line access to all FreeCAD Python APIs.
+Supports AI systems to invoke all FreeCAD CAD functionality through structured commands.
 
-支持的命令组:
-- document: 文档操作
-- part: Part (零件) 模块
-- sketch: Sketcher (草图) 模块
-- draft: Draft (绘制) 模块
-- arch: Arch (建筑) 模块
-- mesh: Mesh (网格) 模块
-- boolean: 布尔运算
-- export: 导出功能
-- info: 信息查询
+Supported command groups:
+- document: Document operations
+- part: Part (component) module
+- sketch: Sketcher module
+- draft: Draft module
+- arch: Arch (architectural) module
+- mesh: Mesh module
+- boolean: Boolean operations
+- export: Export functionality
+- info: Information queries
 
 Author: MiniMax Agent
 """
@@ -30,39 +30,44 @@ import click
 try:
     from .formatter import get_formatter, OutputFormatter
     from .freecad_integration import get_wrapper, check_freecad, FreeCADWrapper
+    from .decorators import NonEmptyString
 except ImportError:
-    # 支持直接运行
+    # Support running directly
     from freecad_cli.formatter import get_formatter, OutputFormatter
     from freecad_cli.freecad_integration import get_wrapper, check_freecad, FreeCADWrapper
+    from freecad_cli.decorators import NonEmptyString
 
 
 # ============================================================================
-# 全局选项
+# Global Options
 # ============================================================================
 
 @click.group()
 @click.option('--format', '-f',
               type=click.Choice(['json', 'yaml', 'text', 'table']),
               default='json',
-              help='输出格式 (默认: json)')
+              help='Output format (default: json)')
 @click.option('--pretty/--no-pretty',
               default=True,
-              help='美化 JSON 输出')
+              help='Pretty print JSON output')
 @click.option('--headless/--gui',
               default=True,
-              help='无头模式或 GUI 模式')
+              help='Headless mode or GUI mode')
 @click.option('--verbose/-v',
               is_flag=True,
-              help='详细输出')
+              help='Verbose output')
 @click.pass_context
 def cli(ctx, format, pretty, headless, verbose):
     """
-    FreeCAD CLI - FreeCAD 命令行接口
+    FreeCAD CLI - FreeCAD Command Line Interface
 
-    提供对 FreeCAD 所有功能的命令行访问，支持 AI 系统调用。
+    Provides command line access to all FreeCAD functionality, supporting AI system invocation.
 
-    示例:
-        freecad-cli part create --name MyBox --type Box --params '{"length": 10}'
+    Global options (such as --format, --pretty, --verbose) must be placed before subcommands.
+
+    Examples:
+        freecad-cli --format json part create --name MyBox --type Box
+        freecad-cli --pretty part create --name MyBox --type Box
         freecad-cli sketch create --name MySketch
         freecad-cli list
     """
@@ -75,57 +80,57 @@ def cli(ctx, format, pretty, headless, verbose):
 
 
 def output_result(ctx, result: Any, message: str = "", status: str = "success"):
-    """格式化并输出结果"""
+    """Format and output result"""
     formatter: OutputFormatter = ctx.obj['FORMATTER']
     click.echo(formatter.format(result, status=status, message=message))
 
 
 def output_error(ctx, message: str, details: Any = None):
-    """输出错误信息"""
+    """Output error message"""
     formatter: OutputFormatter = ctx.obj['FORMATTER']
     click.echo(formatter.error(message, details), err=True)
     sys.exit(1)
 
 
 # ============================================================================
-# 文档命令组
+# Document Command Group
 # ============================================================================
 
 @cli.group('document')
 def document_group():
-    """文档操作命令"""
+    """Document operation commands"""
     pass
 
 
 @document_group.command('create')
-@click.option('--name', '-n', default='Unnamed', help='文档名称')
+@click.option('--name', '-n', default='Unnamed', type=NonEmptyString(), help='Document name')
 @click.pass_context
 def document_create(ctx, name):
-    """创建新文档"""
+    """Create a new document"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     result = wrapper.initialize()
-    output_result(ctx, result, f"文档 '{name}' 创建成功")
+    output_result(ctx, result, f"Document '{name}' created successfully")
 
 
 @document_group.command('list')
 @click.pass_context
 def document_list(ctx):
-    """列出所有对象"""
+    """List all objects"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     objects = wrapper.list_objects()
-    output_result(ctx, objects, f"共 {len(objects)} 个对象")
+    output_result(ctx, objects, f"Total {len(objects)} objects")
 
 
 @document_group.command('info')
 @click.pass_context
 def document_info(ctx):
-    """显示文档信息"""
+    """Display document information"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     init_result = wrapper.initialize()
 
     if not init_result.get('success'):
-        output_error(ctx, "无法初始化 FreeCAD", init_result)
+        output_error(ctx, "Failed to initialize FreeCAD", init_result)
 
     doc = wrapper.get_document()
     info = {
@@ -138,61 +143,61 @@ def document_info(ctx):
 
 
 # ============================================================================
-# Part (零件) 命令组
+# Part (Component) Command Group
 # ============================================================================
 
 @cli.group('part')
 def part_group():
-    """Part (零件) 模块 - 创建基本几何体"""
+    """Part (component) module - Create basic geometry"""
     pass
 
 
 @part_group.command('create')
-@click.option('--name', '-n', required=True, help='对象名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Object name')
 @click.option('--type', '-t',
               type=click.Choice(['Box', 'Cylinder', 'Sphere', 'Cone', 'Torus', 'Ellipsoid']),
               default='Box',
-              help='几何体类型')
+              help='Geometry type')
 @click.option('--params', '-p',
               default='{}',
-              help='几何参数 (JSON 格式)')
+              help='Geometry parameters (JSON format)')
 @click.pass_context
 def part_create(ctx, name, type, params):
-    """创建 Part 几何体"""
+    """Create a Part geometry"""
     try:
         params_dict = json.loads(params)
     except json.JSONDecodeError:
-        output_error(ctx, "参数必须是有效的 JSON 格式")
+        output_error(ctx, "Parameters must be valid JSON format")
 
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_part(name, type, params_dict)
 
     if result.get('success'):
-        output_result(ctx, result, f"Part '{name}' 创建成功")
+        output_result(ctx, result, f"Part '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @part_group.command('list')
-@click.option('--type-filter', '-f', help='按类型过滤')
+@click.option('--type-filter', '-f', help='Filter by type')
 @click.pass_context
 def part_list(ctx, type_filter):
-    """列出所有 Part 对象"""
+    """List all Part objects"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
 
     filter_str = "Part::" if type_filter else None
     objects = wrapper.list_objects(filter_str)
 
-    output_result(ctx, objects, f"共 {len(objects)} 个 Part 对象")
+    output_result(ctx, objects, f"Total {len(objects)} Part objects")
 
 
 @part_group.command('info')
-@click.option('--name', '-n', required=True, help='对象名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Object name')
 @click.pass_context
 def part_info(ctx, name):
-    """获取 Part 对象信息"""
+    """Get Part object information"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.get_object_info(name)
@@ -200,43 +205,43 @@ def part_info(ctx, name):
 
 
 # ============================================================================
-# Sketch (草图) 命令组
+# Sketch Command Group
 # ============================================================================
 
 @cli.group('sketch')
 def sketch_group():
-    """Sketcher (草图) 模块 - 2D 草图绘制"""
+    """Sketcher module - 2D sketch drawing"""
     pass
 
 
 @sketch_group.command('create')
-@click.option('--name', '-n', required=True, help='草图名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Sketch name')
 @click.option('--plane', '-p',
               type=click.Choice(['XY', 'XZ', 'YZ']),
               default='XY',
-              help='草图平面')
+              help='Sketch plane')
 @click.pass_context
 def sketch_create(ctx, name, plane):
-    """创建新草图"""
+    """Create a new sketch"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_sketch(name, plane)
 
     if result.get('success'):
-        output_result(ctx, result, f"草图 '{name}' 创建成功")
+        output_result(ctx, result, f"Sketch '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @sketch_group.command('add-line')
-@click.option('--sketch', '-s', required=True, help='草图名称')
-@click.option('--x1', type=float, default=0.0, help='起点 X 坐标')
-@click.option('--y1', type=float, default=0.0, help='起点 Y 坐标')
-@click.option('--x2', type=float, default=10.0, help='终点 X 坐标')
-@click.option('--y2', type=float, default=10.0, help='终点 Y 坐标')
+@click.option('--sketch', '-s', required=True, help='Sketch name')
+@click.option('--x1', type=float, default=0.0, help='Start point X coordinate')
+@click.option('--y1', type=float, default=0.0, help='Start point Y coordinate')
+@click.option('--x2', type=float, default=10.0, help='End point X coordinate')
+@click.option('--y2', type=float, default=10.0, help='End point Y coordinate')
 @click.pass_context
 def sketch_add_line(ctx, sketch, x1, y1, x2, y2):
-    """向草图添加直线"""
+    """Add a line to a sketch"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.add_sketch_geometry(sketch, "Line", {
@@ -244,19 +249,19 @@ def sketch_add_line(ctx, sketch, x1, y1, x2, y2):
     })
 
     if result.get('success'):
-        output_result(ctx, result, "直线添加成功")
+        output_result(ctx, result, "Line added successfully")
     else:
-        output_error(ctx, result.get('error', '添加失败'), result)
+        output_error(ctx, result.get('error', 'Addition failed'), result)
 
 
 @sketch_group.command('add-circle')
-@click.option('--sketch', '-s', required=True, help='草图名称')
-@click.option('--cx', type=float, default=0.0, help='圆心 X 坐标')
-@click.option('--cy', type=float, default=0.0, help='圆心 Y 坐标')
-@click.option('--radius', '-r', type=float, default=5.0, help='半径')
+@click.option('--sketch', '-s', required=True, help='Sketch name')
+@click.option('--cx', type=float, default=0.0, help='Circle center X coordinate')
+@click.option('--cy', type=float, default=0.0, help='Circle center Y coordinate')
+@click.option('--radius', '-r', type=float, default=5.0, help='Radius')
 @click.pass_context
 def sketch_add_circle(ctx, sketch, cx, cy, radius):
-    """向草图添加圆"""
+    """Add a circle to a sketch"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.add_sketch_geometry(sketch, "Circle", {
@@ -264,42 +269,42 @@ def sketch_add_circle(ctx, sketch, cx, cy, radius):
     })
 
     if result.get('success'):
-        output_result(ctx, result, "圆添加成功")
+        output_result(ctx, result, "Circle added successfully")
     else:
-        output_error(ctx, result.get('error', '添加失败'), result)
+        output_error(ctx, result.get('error', 'Addition failed'), result)
 
 
 @sketch_group.command('list')
 @click.pass_context
 def sketch_list(ctx):
-    """列出所有草图"""
+    """List all sketches"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     objects = wrapper.list_objects("Sketcher")
-    output_result(ctx, objects, f"共 {len(objects)} 个草图")
+    output_result(ctx, objects, f"Total {len(objects)} sketches")
 
 
 # ============================================================================
-# Draft (绘制) 命令组
+# Draft Command Group
 # ============================================================================
 
 @cli.group('draft')
 def draft_group():
-    """Draft (绘制) 模块 - 2D 绘制和注释"""
+    """Draft module - 2D drawing and annotations"""
     pass
 
 
 @draft_group.command('line')
-@click.option('--name', '-n', required=True, help='直线名称')
-@click.option('--x1', type=float, default=0.0, help='起点 X')
-@click.option('--y1', type=float, default=0.0, help='起点 Y')
-@click.option('--z1', type=float, default=0.0, help='起点 Z')
-@click.option('--x2', type=float, default=10.0, help='终点 X')
-@click.option('--y2', type=float, default=10.0, help='终点 Y')
-@click.option('--z2', type=float, default=0.0, help='终点 Z')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Line name')
+@click.option('--x1', type=float, default=0.0, help='Start X')
+@click.option('--y1', type=float, default=0.0, help='Start Y')
+@click.option('--z1', type=float, default=0.0, help='Start Z')
+@click.option('--x2', type=float, default=10.0, help='End X')
+@click.option('--y2', type=float, default=10.0, help='End Y')
+@click.option('--z2', type=float, default=0.0, help='End Z')
 @click.pass_context
 def draft_line(ctx, name, x1, y1, z1, x2, y2, z2):
-    """创建直线"""
+    """Create a line"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_draft_object(name, "Line", {
@@ -308,18 +313,18 @@ def draft_line(ctx, name, x1, y1, z1, x2, y2, z2):
     })
 
     if result.get('success'):
-        output_result(ctx, result, f"直线 '{name}' 创建成功")
+        output_result(ctx, result, f"Line '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @draft_group.command('circle')
-@click.option('--name', '-n', required=True, help='圆名称')
-@click.option('--radius', '-r', type=float, default=10.0, help='半径')
-@click.option('--face/--wire', default=False, help='是否创建面')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Circle name')
+@click.option('--radius', '-r', type=float, default=10.0, help='Radius')
+@click.option('--face/--wire', default=False, help='Whether to create a face')
 @click.pass_context
 def draft_circle(ctx, name, radius, face):
-    """创建圆"""
+    """Create a circle"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_draft_object(name, "Circle", {
@@ -328,19 +333,19 @@ def draft_circle(ctx, name, radius, face):
     })
 
     if result.get('success'):
-        output_result(ctx, result, f"圆 '{name}' 创建成功")
+        output_result(ctx, result, f"Circle '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @draft_group.command('rectangle')
-@click.option('--name', '-n', required=True, help='矩形名称')
-@click.option('--length', '-l', type=float, default=10.0, help='长度')
-@click.option('--height', '-h', type=float, default=5.0, help='高度')
-@click.option('--face/--wire', default=False, help='是否创建面')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Rectangle name')
+@click.option('--length', '-l', type=float, default=10.0, help='Length')
+@click.option('--height', '-h', type=float, default=5.0, help='Height')
+@click.option('--face/--wire', default=False, help='Whether to create a face')
 @click.pass_context
 def draft_rectangle(ctx, name, length, height, face):
-    """创建矩形"""
+    """Create a rectangle"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_draft_object(name, "Rectangle", {
@@ -350,18 +355,18 @@ def draft_rectangle(ctx, name, length, height, face):
     })
 
     if result.get('success'):
-        output_result(ctx, result, f"矩形 '{name}' 创建成功")
+        output_result(ctx, result, f"Rectangle '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @draft_group.command('polygon')
-@click.option('--name', '-n', required=True, help='多边形名称')
-@click.option('--sides', '-s', type=int, default=6, help='边数')
-@click.option('--radius', '-r', type=float, default=10.0, help='外接圆半径')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Polygon name')
+@click.option('--sides', '-s', type=int, default=6, help='Number of sides')
+@click.option('--radius', '-r', type=float, default=10.0, help='Circumradius')
 @click.pass_context
 def draft_polygon(ctx, name, sides, radius):
-    """创建正多边形"""
+    """Create a regular polygon"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_draft_object(name, "Polygon", {
@@ -370,29 +375,29 @@ def draft_polygon(ctx, name, sides, radius):
     })
 
     if result.get('success'):
-        output_result(ctx, result, f"多边形 '{name}' 创建成功")
+        output_result(ctx, result, f"Polygon '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 # ============================================================================
-# Arch (建筑) 命令组
+# Arch (Architectural) Command Group
 # ============================================================================
 
 @cli.group('arch')
 def arch_group():
-    """Arch (建筑) 模块 - BIM 和建筑建模"""
+    """Arch module - BIM and architectural modeling"""
     pass
 
 
 @arch_group.command('wall')
-@click.option('--name', '-n', required=True, help='墙体名称')
-@click.option('--length', '-l', type=float, default=100.0, help='长度 (mm)')
-@click.option('--width', '-w', type=float, default=20.0, help='宽度 (mm)')
-@click.option('--height', '-h', type=float, default=300.0, help='高度 (mm)')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Wall name')
+@click.option('--length', '-l', type=float, default=100.0, help='Length (mm)')
+@click.option('--width', '-w', type=float, default=20.0, help='Width (mm)')
+@click.option('--height', '-h', type=float, default=300.0, help='Height (mm)')
 @click.pass_context
 def arch_wall(ctx, name, length, width, height):
-    """创建墙体"""
+    """Create a wall"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_arch_object(name, "Wall", {
@@ -402,19 +407,19 @@ def arch_wall(ctx, name, length, width, height):
     })
 
     if result.get('success'):
-        output_result(ctx, result, f"墙体 '{name}' 创建成功")
+        output_result(ctx, result, f"Wall '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @arch_group.command('structure')
-@click.option('--name', '-n', required=True, help='结构名称')
-@click.option('--length', '-l', type=float, default=100.0, help='长度')
-@click.option('--width', '-w', type=float, default=100.0, help='宽度')
-@click.option('--height', '-h', type=float, default=200.0, help='高度')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Structure name')
+@click.option('--length', '-l', type=float, default=100.0, help='Length')
+@click.option('--width', '-w', type=float, default=100.0, help='Width')
+@click.option('--height', '-h', type=float, default=200.0, help='Height')
 @click.pass_context
 def arch_structure(ctx, name, length, width, height):
-    """创建结构"""
+    """Create a structure"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_arch_object(name, "Structure", {
@@ -424,18 +429,18 @@ def arch_structure(ctx, name, length, width, height):
     })
 
     if result.get('success'):
-        output_result(ctx, result, f"结构 '{name}' 创建成功")
+        output_result(ctx, result, f"Structure '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @arch_group.command('window')
-@click.option('--name', '-n', required=True, help='窗户名称')
-@click.option('--width', '-w', type=float, default=100.0, help='宽度')
-@click.option('--height', '-h', type=float, default=150.0, help='高度')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Window name')
+@click.option('--width', '-w', type=float, default=100.0, help='Width')
+@click.option('--height', '-h', type=float, default=150.0, help='Height')
 @click.pass_context
 def arch_window(ctx, name, width, height):
-    """创建窗户"""
+    """Create a window"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_arch_object(name, "Window", {
@@ -444,174 +449,174 @@ def arch_window(ctx, name, width, height):
     })
 
     if result.get('success'):
-        output_result(ctx, result, f"窗户 '{name}' 创建成功")
+        output_result(ctx, result, f"Window '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 # ============================================================================
-# 布尔运算命令组
+# Boolean Command Group
 # ============================================================================
 
 @cli.group('boolean')
 def boolean_group():
-    """布尔运算命令"""
+    """Boolean operation commands"""
     pass
 
 
 @boolean_group.command('fuse')
-@click.option('--name', '-n', required=True, help='结果对象名称')
-@click.option('--object1', '-o1', required=True, help='第一个对象')
-@click.option('--object2', '-o2', required=True, help='第二个对象')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Result object name')
+@click.option('--object1', '-o1', required=True, help='First object')
+@click.option('--object2', '-o2', required=True, help='Second object')
 @click.pass_context
 def boolean_fuse(ctx, name, object1, object2):
-    """并集运算 (Fuse)"""
+    """Union operation (Fuse)"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.boolean_operation(name, "Fuse", object1, object2)
 
     if result.get('success'):
-        output_result(ctx, result, f"并集 '{name}' 计算成功")
+        output_result(ctx, result, f"Union '{name}' computed successfully")
     else:
-        output_error(ctx, result.get('error', '运算失败'), result)
+        output_error(ctx, result.get('error', 'Operation failed'), result)
 
 
 @boolean_group.command('cut')
-@click.option('--name', '-n', required=True, help='结果对象名称')
-@click.option('--object1', '-o1', required=True, help='被切对象')
-@click.option('--object2', '-o2', required=True, help='切削对象')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Result object name')
+@click.option('--object1', '-o1', required=True, help='Object to cut')
+@click.option('--object2', '-o2', required=True, help='Cutting object')
 @click.pass_context
 def boolean_cut(ctx, name, object1, object2):
-    """差集运算 (Cut)"""
+    """Subtraction operation (Cut)"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.boolean_operation(name, "Cut", object1, object2)
 
     if result.get('success'):
-        output_result(ctx, result, f"差集 '{name}' 计算成功")
+        output_result(ctx, result, f"Subtraction '{name}' computed successfully")
     else:
-        output_error(ctx, result.get('error', '运算失败'), result)
+        output_error(ctx, result.get('error', 'Operation failed'), result)
 
 
 @boolean_group.command('common')
-@click.option('--name', '-n', required=True, help='结果对象名称')
-@click.option('--object1', '-o1', required=True, help='第一个对象')
-@click.option('--object2', '-o2', required=True, help='第二个对象')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Result object name')
+@click.option('--object1', '-o1', required=True, help='First object')
+@click.option('--object2', '-o2', required=True, help='Second object')
 @click.pass_context
 def boolean_common(ctx, name, object1, object2):
-    """交集运算 (Common)"""
+    """Intersection operation (Common)"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.boolean_operation(name, "Common", object1, object2)
 
     if result.get('success'):
-        output_result(ctx, result, f"交集 '{name}' 计算成功")
+        output_result(ctx, result, f"Intersection '{name}' computed successfully")
     else:
-        output_error(ctx, result.get('error', '运算失败'), result)
+        output_error(ctx, result.get('error', 'Operation failed'), result)
 
 
 @boolean_group.command('section')
-@click.option('--name', '-n', required=True, help='结果对象名称')
-@click.option('--object1', '-o1', required=True, help='第一个对象')
-@click.option('--object2', '-o2', required=True, help='第二个对象')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Result object name')
+@click.option('--object1', '-o1', required=True, help='First object')
+@click.option('--object2', '-o2', required=True, help='Second object')
 @click.pass_context
 def boolean_section(ctx, name, object1, object2):
-    """截面运算 (Section)"""
+    """Section operation (Section)"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.boolean_operation(name, "Section", object1, object2)
 
     if result.get('success'):
-        output_result(ctx, result, f"截面 '{name}' 计算成功")
+        output_result(ctx, result, f"Section '{name}' computed successfully")
     else:
-        output_error(ctx, result.get('error', '运算失败'), result)
+        output_error(ctx, result.get('error', 'Operation failed'), result)
 
 
 # ============================================================================
-# 导出命令组
+# Export Command Group
 # ============================================================================
 
 @cli.group('export')
 def export_group():
-    """导出命令"""
+    """Export commands"""
     pass
 
 
 @export_group.command('step')
-@click.option('--filepath', '-f', required=True, help='导出文件路径')
+@click.option('--filepath', '-f', required=True, help='Export file path')
 @click.pass_context
 def export_step(ctx, filepath):
-    """导出为 STEP 格式"""
+    """Export to STEP format"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.export_document(filepath, "STEP")
 
     if result.get('success'):
-        output_result(ctx, result, f"已导出到 {filepath}")
+        output_result(ctx, result, f"Exported to {filepath}")
     else:
-        output_error(ctx, result.get('error', '导出失败'), result)
+        output_error(ctx, result.get('error', 'Export failed'), result)
 
 
 @export_group.command('stl')
-@click.option('--filepath', '-f', required=True, help='导出文件路径')
+@click.option('--filepath', '-f', required=True, help='Export file path')
 @click.pass_context
 def export_stl(ctx, filepath):
-    """导出为 STL 格式"""
+    """Export to STL format"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.export_document(filepath, "STL")
 
     if result.get('success'):
-        output_result(ctx, result, f"已导出到 {filepath}")
+        output_result(ctx, result, f"Exported to {filepath}")
     else:
-        output_error(ctx, result.get('error', '导出失败'), result)
+        output_error(ctx, result.get('error', 'Export failed'), result)
 
 
 @export_group.command('obj')
-@click.option('--filepath', '-f', required=True, help='导出文件路径')
+@click.option('--filepath', '-f', required=True, help='Export file path')
 @click.pass_context
 def export_obj(ctx, filepath):
-    """导出为 OBJ 格式"""
+    """Export to OBJ format"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.export_document(filepath, "OBJ")
 
     if result.get('success'):
-        output_result(ctx, result, f"已导出到 {filepath}")
+        output_result(ctx, result, f"Exported to {filepath}")
     else:
-        output_error(ctx, result.get('error', '导出失败'), result)
+        output_error(ctx, result.get('error', 'Export failed'), result)
 
 
 @export_group.command('iges')
-@click.option('--filepath', '-f', required=True, help='导出文件路径')
+@click.option('--filepath', '-f', required=True, help='Export file path')
 @click.pass_context
 def export_iges(ctx, filepath):
-    """导出为 IGES 格式"""
+    """Export to IGES format"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.export_document(filepath, "IGES")
 
     if result.get('success'):
-        output_result(ctx, result, f"已导出到 {filepath}")
+        output_result(ctx, result, f"Exported to {filepath}")
     else:
-        output_error(ctx, result.get('error', '导出失败'), result)
+        output_error(ctx, result.get('error', 'Export failed'), result)
 
 
 # ============================================================================
-# 信息查询命令
+# Information Command Group
 # ============================================================================
 
 @cli.group('info')
 def info_group():
-    """信息查询命令"""
+    """Information query commands"""
     pass
 
 
 @info_group.command('object')
-@click.option('--name', '-n', required=True, help='对象名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Object name')
 @click.pass_context
 def info_object(ctx, name):
-    """获取对象详细信息"""
+    """Get detailed object information"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.get_object_info(name)
@@ -621,7 +626,7 @@ def info_object(ctx, name):
 @info_group.command('status')
 @click.pass_context
 def info_status(ctx):
-    """显示 FreeCAD 状态"""
+    """Display FreeCAD status"""
     freecad_available = check_freecad()
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     init_result = wrapper.initialize()
@@ -647,41 +652,41 @@ def info_status(ctx):
 @info_group.command('modules')
 @click.pass_context
 def info_modules(ctx):
-    """列出可用模块"""
+    """List available modules"""
     modules = {
         "core": {
             "name": "Part",
-            "description": "零件和实体建模",
+            "description": "Part and solid modeling",
             "available": True
         },
         "sketcher": {
             "name": "Sketcher",
-            "description": "2D 草图约束求解器",
+            "description": "2D sketch constraint solver",
             "available": True
         },
         "draft": {
             "name": "Draft",
-            "description": "2D 绘制和注释",
+            "description": "2D drawing and annotations",
             "available": True
         },
         "arch": {
             "name": "Arch",
-            "description": "建筑信息模型 (BIM)",
+            "description": "Building Information Modeling (BIM)",
             "available": True
         },
         "mesh": {
             "name": "Mesh",
-            "description": "网格处理",
+            "description": "Mesh processing",
             "available": True
         },
         "surface": {
             "name": "Surface",
-            "description": "曲面建模",
+            "description": "Surface modeling",
             "available": True
         },
         "design": {
             "name": "PartDesign",
-            "description": "零件设计工作台",
+            "description": "Part design workbench",
             "available": True
         }
     }
@@ -689,779 +694,779 @@ def info_modules(ctx):
 
 
 # ============================================================================
-# 对象操作命令
+# Object Operation Commands
 # ============================================================================
 
 @cli.group('object')
 def object_group():
-    """对象操作命令"""
+    """Object operation commands"""
     pass
 
 
 @object_group.command('delete')
-@click.option('--name', '-n', required=True, help='对象名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Object name')
 @click.pass_context
 def object_delete(ctx, name):
-    """删除对象"""
+    """Delete an object"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.delete_object(name)
 
     if result.get('success'):
-        output_result(ctx, result, f"对象 '{name}' 已删除")
+        output_result(ctx, result, f"Object '{name}' deleted")
     else:
-        output_error(ctx, result.get('error', '删除失败'), result)
+        output_error(ctx, result.get('error', 'Deletion failed'), result)
 
 
 @object_group.command('list')
-@click.option('--type', '-t', help='类型过滤器')
+@click.option('--type', '-t', help='Type filter')
 @click.pass_context
 def object_list(ctx, type):
-    """列出所有对象"""
+    """List all objects"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
 
     filter_str = type if type else None
     objects = wrapper.list_objects(filter_str)
 
-    output_result(ctx, objects, f"共 {len(objects)} 个对象")
+    output_result(ctx, objects, f"Total {len(objects)} objects")
 
 
 # ============================================================================
-# Mesh (网格) 命令组
+# Mesh Command Group
 # ============================================================================
 
 @cli.group('mesh')
 def mesh_group():
-    """Mesh (网格) 模块 - 网格处理和操作"""
+    """Mesh module - Mesh processing and operations"""
     pass
 
 
 @mesh_group.command('create')
-@click.option('--name', '-n', required=True, help='对象名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Object name')
 @click.option('--type', '-t',
               type=click.Choice(['RegularMesh', 'Triangle', 'Grid']),
               default='RegularMesh',
-              help='网格类型')
+              help='Mesh type')
 @click.option('--params', '-p',
               default='{}',
-              help='网格参数 (JSON 格式)')
+              help='Mesh parameters (JSON format)')
 @click.pass_context
 def mesh_create(ctx, name, type, params):
-    """创建 Mesh 网格对象"""
+    """Create a Mesh object"""
     try:
         params_dict = json.loads(params)
     except json.JSONDecodeError:
-        output_error(ctx, "参数必须是有效的 JSON 格式")
+        output_error(ctx, "Parameters must be valid JSON format")
 
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_mesh_object(name, type, params_dict)
 
     if result.get('success'):
-        output_result(ctx, result, f"Mesh '{name}' 创建成功")
+        output_result(ctx, result, f"Mesh '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @mesh_group.command('from-shape')
-@click.option('--name', '-n', required=True, help='网格对象名称')
-@click.option('--source', '-s', required=True, help='源形状对象名称')
-@click.option('--deflection', '-d', type=float, default=0.1, help='网格精度')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Mesh object name')
+@click.option('--source', '-s', required=True, help='Source shape object name')
+@click.option('--deflection', '-d', type=float, default=0.1, help='Mesh precision')
 @click.pass_context
 def mesh_from_shape(ctx, name, source, deflection):
-    """从形状创建网格"""
+    """Create mesh from shape"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.mesh_from_shape(name, source, deflection)
 
     if result.get('success'):
-        output_result(ctx, result, f"网格 '{name}' 从形状创建成功")
+        output_result(ctx, result, f"Mesh '{name}' created from shape successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @mesh_group.command('boolean')
-@click.option('--name', '-n', required=True, help='结果对象名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Result object name')
 @click.option('--operation', '-o',
               type=click.Choice(['Union', 'Intersection', 'Difference']),
               required=True,
-              help='布尔运算类型')
-@click.option('--object1', '-o1', required=True, help='第一个网格对象')
-@click.option('--object2', '-o2', required=True, help='第二个网格对象')
+              help='Boolean operation type')
+@click.option('--object1', '-o1', required=True, help='First mesh object')
+@click.option('--object2', '-o2', required=True, help='Second mesh object')
 @click.pass_context
 def mesh_boolean(ctx, name, operation, object1, object2):
-    """网格布尔运算"""
+    """Mesh boolean operation"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.mesh_boolean(name, operation, object1, object2)
 
     if result.get('success'):
-        output_result(ctx, result, f"网格布尔运算 '{name}' 成功")
+        output_result(ctx, result, f"Mesh boolean operation '{name}' succeeded")
     else:
-        output_error(ctx, result.get('error', '运算失败'), result)
+        output_error(ctx, result.get('error', 'Operation failed'), result)
 
 
 @mesh_group.command('list')
 @click.pass_context
 def mesh_list(ctx):
-    """列出所有 Mesh 对象"""
+    """List all Mesh objects"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     objects = wrapper.list_objects("Mesh")
-    output_result(ctx, objects, f"共 {len(objects)} 个 Mesh 对象")
+    output_result(ctx, objects, f"Total {len(objects)} Mesh objects")
 
 
 # ============================================================================
-# Surface (曲面) 命令组
+# Surface Command Group
 # ============================================================================
 
 @cli.group('surface')
 def surface_group():
-    """Surface (曲面) 模块 - 曲面建模"""
+    """Surface module - Surface modeling"""
     pass
 
 
 @surface_group.command('create')
-@click.option('--name', '-n', required=True, help='曲面对象名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Surface object name')
 @click.option('--type', '-t',
               type=click.Choice(['Fill', 'Sweep', 'Loft', 'Bezier']),
               default='Fill',
-              help='曲面类型')
+              help='Surface type')
 @click.option('--params', '-p',
               default='{}',
-              help='曲面参数 (JSON 格式)')
+              help='Surface parameters (JSON format)')
 @click.pass_context
 def surface_create(ctx, name, type, params):
-    """创建 Surface 曲面"""
+    """Create a Surface"""
     try:
         params_dict = json.loads(params)
     except json.JSONDecodeError:
-        output_error(ctx, "参数必须是有效的 JSON 格式")
+        output_error(ctx, "Parameters must be valid JSON format")
 
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_surface(name, type, params_dict)
 
     if result.get('success'):
-        output_result(ctx, result, f"曲面 '{name}' 创建成功")
+        output_result(ctx, result, f"Surface '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @surface_group.command('from-edges')
-@click.option('--name', '-n', required=True, help='曲面对象名称')
-@click.option('--sketch', '-s', required=True, help='草图名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Surface object name')
+@click.option('--sketch', '-s', required=True, help='Sketch name')
 @click.pass_context
 def surface_from_edges(ctx, name, sketch):
-    """从草图边界创建曲面"""
+    """Create surface from sketch edges"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.surface_from_edges(name, sketch)
 
     if result.get('success'):
-        output_result(ctx, result, f"曲面 '{name}' 从边界创建成功")
+        output_result(ctx, result, f"Surface '{name}' created from edges successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 # ============================================================================
-# PartDesign (零件设计) 命令组
+# PartDesign Command Group
 # ============================================================================
 
 @cli.group('partdesign')
 def partdesign_group():
-    """PartDesign (零件设计) 模块 - 零件设计和特征"""
+    """PartDesign module - Part design and features"""
     pass
 
 
 @partdesign_group.command('create-body')
-@click.option('--name', '-n', required=True, help='Body 名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Body name')
 @click.pass_context
 def partdesign_create_body(ctx, name):
-    """创建 PartDesign Body"""
+    """Create a PartDesign Body"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_partdesign_body(name)
 
     if result.get('success'):
-        output_result(ctx, result, f"Body '{name}' 创建成功")
+        output_result(ctx, result, f"Body '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @partdesign_group.command('pad')
-@click.option('--name', '-n', required=True, help='Pad 名称')
-@click.option('--body', '-b', required=True, help='Body 名称')
-@click.option('--sketch', '-s', required=True, help='草图名称')
-@click.option('--length', '-l', type=float, default=10.0, help='拉伸长度')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Pad name')
+@click.option('--body', '-b', required=True, help='Body name')
+@click.option('--sketch', '-s', required=True, help='Sketch name')
+@click.option('--length', '-l', type=float, default=10.0, help='Extrusion length')
 @click.option('--direction', '-d',
               type=click.Choice(['Normal', 'Reversed', 'Double']),
               default='Normal',
-              help='拉伸方向')
+              help='Extrusion direction')
 @click.pass_context
 def partdesign_pad(ctx, name, body, sketch, length, direction):
-    """创建 Pad 拉伸特征"""
+    """Create a Pad extrusion feature"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_pad(name, body, sketch, length, direction)
 
     if result.get('success'):
-        output_result(ctx, result, f"Pad '{name}' 创建成功")
+        output_result(ctx, result, f"Pad '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @partdesign_group.command('pocket')
-@click.option('--name', '-n', required=True, help='Pocket 名称')
-@click.option('--body', '-b', required=True, help='Body 名称')
-@click.option('--sketch', '-s', required=True, help='草图名称')
-@click.option('--length', '-l', type=float, default=10.0, help='切除深度')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Pocket name')
+@click.option('--body', '-b', required=True, help='Body name')
+@click.option('--sketch', '-s', required=True, help='Sketch name')
+@click.option('--length', '-l', type=float, default=10.0, help='Cut depth')
 @click.option('--type', '-t',
               type=click.Choice(['Through', 'UpToFirst', 'UpToFace']),
               default='Through',
-              help='切除类型')
+              help='Cut type')
 @click.pass_context
 def partdesign_pocket(ctx, name, body, sketch, length, type):
-    """创建 Pocket 切除特征"""
+    """Create a Pocket cut feature"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_pocket(name, body, sketch, length, type)
 
     if result.get('success'):
-        output_result(ctx, result, f"Pocket '{name}' 创建成功")
+        output_result(ctx, result, f"Pocket '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @partdesign_group.command('hole')
-@click.option('--name', '-n', required=True, help='孔名称')
-@click.option('--body', '-b', required=True, help='Body 名称')
-@click.option('--diameter', '-d', type=float, default=5.0, help='孔直径')
-@click.option('--depth', '-l', type=float, default=10.0, help='孔深度')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Hole name')
+@click.option('--body', '-b', required=True, help='Body name')
+@click.option('--diameter', '-d', type=float, default=5.0, help='Hole diameter')
+@click.option('--depth', '-l', type=float, default=10.0, help='Hole depth')
 @click.option('--position', '-p',
-              help='孔位置 (x,y,z)',
+              help='Hole position (x,y,z)',
               default=None)
 @click.pass_context
 def partdesign_hole(ctx, name, body, diameter, depth, position):
-    """创建孔特征"""
+    """Create a hole feature"""
     pos = None
     if position:
         try:
             pos = tuple(map(float, position.split(',')))
         except ValueError:
-            output_error(ctx, "位置必须是 x,y,z 格式")
+            output_error(ctx, "Position must be in x,y,z format")
 
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_hole(name, body, diameter, depth, pos)
 
     if result.get('success'):
-        output_result(ctx, result, f"孔 '{name}' 创建成功")
+        output_result(ctx, result, f"Hole '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @partdesign_group.command('revolution')
-@click.option('--name', '-n', required=True, help='旋转体名称')
-@click.option('--body', '-b', required=True, help='Body 名称')
-@click.option('--sketch', '-s', required=True, help='草图名称')
-@click.option('--angle', '-a', type=float, default=360.0, help='旋转角度')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Revolution name')
+@click.option('--body', '-b', required=True, help='Body name')
+@click.option('--sketch', '-s', required=True, help='Sketch name')
+@click.option('--angle', '-a', type=float, default=360.0, help='Revolution angle')
 @click.pass_context
 def partdesign_revolution(ctx, name, body, sketch, angle):
-    """创建旋转体特征"""
+    """Create a revolution feature"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_revolution(name, body, sketch, angle)
 
     if result.get('success'):
-        output_result(ctx, result, f"旋转体 '{name}' 创建成功")
+        output_result(ctx, result, f"Revolution '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @partdesign_group.command('groove')
-@click.option('--name', '-n', required=True, help='Groove 名称')
-@click.option('--body', '-b', required=True, help='Body 名称')
-@click.option('--angle', '-a', type=float, default=360.0, help='旋转角度')
-@click.option('--radius', '-r', type=float, default=5.0, help='旋转半径')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Groove name')
+@click.option('--body', '-b', required=True, help='Body name')
+@click.option('--angle', '-a', type=float, default=360.0, help='Revolution angle')
+@click.option('--radius', '-r', type=float, default=5.0, help='Revolution radius')
 @click.pass_context
 def partdesign_groove(ctx, name, body, angle, radius):
-    """创建旋转切除特征"""
+    """Create a groove cut feature"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_groove(name, body, angle, radius)
 
     if result.get('success'):
-        output_result(ctx, result, f"Groove '{name}' 创建成功")
+        output_result(ctx, result, f"Groove '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @partdesign_group.command('fillet')
-@click.option('--name', '-n', required=True, help='圆角名称')
-@click.option('--body', '-b', required=True, help='Body 名称')
-@click.option('--radius', '-r', type=float, default=2.0, help='圆角半径')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Fillet name')
+@click.option('--body', '-b', required=True, help='Body name')
+@click.option('--radius', '-r', type=float, default=2.0, help='Fillet radius')
 @click.pass_context
 def partdesign_fillet(ctx, name, body, radius):
-    """创建圆角特征"""
+    """Create a fillet feature"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_fillet(name, body, radius)
 
     if result.get('success'):
-        output_result(ctx, result, f"圆角 '{name}' 创建成功")
+        output_result(ctx, result, f"Fillet '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @partdesign_group.command('chamfer')
-@click.option('--name', '-n', required=True, help='倒角名称')
-@click.option('--body', '-b', required=True, help='Body 名称')
-@click.option('--size', '-s', type=float, default=1.0, help='倒角大小')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Chamfer name')
+@click.option('--body', '-b', required=True, help='Body name')
+@click.option('--size', '-s', type=float, default=1.0, help='Chamfer size')
 @click.pass_context
 def partdesign_chamfer(ctx, name, body, size):
-    """创建倒角特征"""
+    """Create a chamfer feature"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.create_chamfer(name, body, size)
 
     if result.get('success'):
-        output_result(ctx, result, f"倒角 '{name}' 创建成功")
+        output_result(ctx, result, f"Chamfer '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 # ============================================================================
-# TechDraw (工程图) 命令组
+# TechDraw Command Group
 # ============================================================================
 
 @cli.group('techdraw')
 def techdraw_group():
-    """TechDraw (工程图) 模块 - 技术图纸和标注"""
+    """TechDraw module - Technical drawings and annotations"""
     pass
 
 
 @techdraw_group.command('create-page')
-@click.option('--name', '-n', required=True, help='页面名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Page name')
 @click.option('--template', '-t', default='A4_Landscape',
-              help='图纸模板 (A4_Landscape, A4_Portrait, A3_Landscape)')
+              help='Drawing template (A4_Landscape, A4_Portrait, A3_Landscape)')
 @click.pass_context
 def techdraw_create_page(ctx, name, template):
-    """创建 TechDraw 页面"""
+    """Create a TechDraw page"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.techdraw_create_page(name, template)
 
     if result.get('success'):
-        output_result(ctx, result, f"页面 '{name}' 创建成功")
+        output_result(ctx, result, f"Page '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @techdraw_group.command('add-view')
-@click.option('--page', '-p', required=True, help='页面名称')
-@click.option('--source', '-s', required=True, help='源对象名称')
+@click.option('--page', '-p', required=True, help='Page name')
+@click.option('--source', '-s', required=True, help='Source object name')
 @click.option('--projection', '--proj', default='FirstAngle',
               type=click.Choice(['FirstAngle', 'ThirdAngle']),
-              help='投影类型')
+              help='Projection type')
 @click.pass_context
 def techdraw_add_view(ctx, page, source, projection):
-    """添加工程视图"""
+    """Add an engineering view"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.techdraw_add_view(page, source, projection)
 
     if result.get('success'):
-        output_result(ctx, result, f"视图创建成功")
+        output_result(ctx, result, f"View created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @techdraw_group.command('add-dimension')
-@click.option('--view', '-v', required=True, help='视图名称')
+@click.option('--view', '-v', required=True, help='View name')
 @click.option('--type', '-t',
               type=click.Choice(['Horizontal', 'Vertical', 'Radius', 'Diameter', 'Angle']),
               default='Horizontal',
-              help='尺寸类型')
+              help='Dimension type')
 @click.pass_context
 def techdraw_add_dimension(ctx, view, type):
-    """添加尺寸标注"""
+    """Add a dimension annotation"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.techdraw_add_dimension(view, type, [])
 
     if result.get('success'):
-        output_result(ctx, result, f"尺寸标注创建成功")
+        output_result(ctx, result, f"Dimension annotation created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @techdraw_group.command('export')
-@click.option('--page', '-p', required=True, help='页面名称')
-@click.option('--filepath', '-f', required=True, help='导出文件路径')
+@click.option('--page', '-p', required=True, help='Page name')
+@click.option('--filepath', '-f', required=True, help='Export file path')
 @click.option('--format', '-fmt',
               type=click.Choice(['PDF', 'SVG', 'DXF']),
               default='PDF',
-              help='导出格式')
+              help='Export format')
 @click.pass_context
 def techdraw_export(ctx, page, filepath, format):
-    """导出工程图"""
+    """Export drawing"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.techdraw_export(page, filepath, format)
 
     if result.get('success'):
-        output_result(ctx, result, f"已导出到 {filepath}")
+        output_result(ctx, result, f"Exported to {filepath}")
     else:
-        output_error(ctx, result.get('error', '导出失败'), result)
+        output_error(ctx, result.get('error', 'Export failed'), result)
 
 
 # ============================================================================
-# Spreadsheet (电子表格) 命令组
+# Spreadsheet Command Group
 # ============================================================================
 
 @cli.group('spreadsheet')
 def spreadsheet_group():
-    """Spreadsheet (电子表格) 模块 - 参数化表格"""
+    """Spreadsheet module - Parametric spreadsheets"""
     pass
 
 
 @spreadsheet_group.command('create')
-@click.option('--name', '-n', required=True, help='表格名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Spreadsheet name')
 @click.pass_context
 def spreadsheet_create(ctx, name):
-    """创建电子表格"""
+    """Create a spreadsheet"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.spreadsheet_create(name)
 
     if result.get('success'):
-        output_result(ctx, result, f"电子表格 '{name}' 创建成功")
+        output_result(ctx, result, f"Spreadsheet '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @spreadsheet_group.command('set-cell')
-@click.option('--sheet', '-s', required=True, help='表格名称')
-@click.option('--cell', '-c', required=True, help='单元格 (如 A1)')
-@click.option('--value', '-v', required=True, help='单元格值')
+@click.option('--sheet', '-s', required=True, help='Spreadsheet name')
+@click.option('--cell', '-c', required=True, help='Cell (e.g. A1)')
+@click.option('--value', '-v', required=True, help='Cell value')
 @click.pass_context
 def spreadsheet_set_cell(ctx, sheet, cell, value):
-    """设置单元格值"""
+    """Set cell value"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.spreadsheet_set_cell(sheet, cell, value)
 
     if result.get('success'):
-        output_result(ctx, result, f"单元格 {cell} 设置成功")
+        output_result(ctx, result, f"Cell {cell} set successfully")
     else:
-        output_error(ctx, result.get('error', '设置失败'), result)
+        output_error(ctx, result.get('error', 'Setting failed'), result)
 
 
 @spreadsheet_group.command('set-formula')
-@click.option('--sheet', '-s', required=True, help='表格名称')
-@click.option('--cell', '-c', required=True, help='单元格')
-@click.option('--formula', '-f', required=True, help='公式 (如 =A1*2)')
+@click.option('--sheet', '-s', required=True, help='Spreadsheet name')
+@click.option('--cell', '-c', required=True, help='Cell')
+@click.option('--formula', '-f', required=True, help='Formula (e.g. =A1*2)')
 @click.pass_context
 def spreadsheet_set_formula(ctx, sheet, cell, formula):
-    """设置单元格公式"""
+    """Set cell formula"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.spreadsheet_set_formula(sheet, cell, formula)
 
     if result.get('success'):
-        output_result(ctx, result, f"公式设置成功")
+        output_result(ctx, result, f"Formula set successfully")
     else:
-        output_error(ctx, result.get('error', '设置失败'), result)
+        output_error(ctx, result.get('error', 'Setting failed'), result)
 
 
 @spreadsheet_group.command('link')
-@click.option('--sheet', '-s', required=True, help='表格名称')
-@click.option('--object', '-o', required=True, help='对象名称')
-@click.option('--property', '-p', required=True, help='属性名称')
-@click.option('--cell', '-c', required=True, help='单元格')
+@click.option('--sheet', '-s', required=True, help='Spreadsheet name')
+@click.option('--object', '-o', required=True, help='Object name')
+@click.option('--property', '-p', required=True, help='Property name')
+@click.option('--cell', '-c', required=True, help='Cell')
 @click.pass_context
 def spreadsheet_link(ctx, sheet, object, property, cell):
-    """链接电子表格到对象属性"""
+    """Link spreadsheet to object property"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.spreadsheet_link(sheet, object, property, cell)
 
     if result.get('success'):
-        output_result(ctx, result, f"链接创建成功")
+        output_result(ctx, result, f"Link created successfully")
     else:
-        output_error(ctx, result.get('error', '链接失败'), result)
+        output_error(ctx, result.get('error', 'Link failed'), result)
 
 
 # ============================================================================
-# Assembly (装配) 命令组
+# Assembly Command Group
 # ============================================================================
 
 @cli.group('assembly')
 def assembly_group():
-    """Assembly (装配) 模块 - 装配管理"""
+    """Assembly module - Assembly management"""
     pass
 
 
 @assembly_group.command('create')
-@click.option('--name', '-n', required=True, help='装配名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Assembly name')
 @click.pass_context
 def assembly_create(ctx, name):
-    """创建装配"""
+    """Create an assembly"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.assembly_create(name)
 
     if result.get('success'):
-        output_result(ctx, result, f"装配 '{name}' 创建成功")
+        output_result(ctx, result, f"Assembly '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @assembly_group.command('add-part')
-@click.option('--assembly', '-a', required=True, help='装配名称')
-@click.option('--part', '-p', required=True, help='零件名称')
-@click.option('--placement', '-pl', default='[0, 0, 0]', help='位置 [x, y, z]')
+@click.option('--assembly', '-a', required=True, help='Assembly name')
+@click.option('--part', '-p', required=True, help='Part name')
+@click.option('--placement', '-pl', default='[0, 0, 0]', help='Position [x, y, z]')
 @click.pass_context
 def assembly_add_part(ctx, assembly, part, placement):
-    """向装配添加零件"""
+    """Add a part to an assembly"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.assembly_add_part(assembly, part, placement)
 
     if result.get('success'):
-        output_result(ctx, result, f"零件 '{part}' 添加到装配成功")
+        output_result(ctx, result, f"Part '{part}' added to assembly successfully")
     else:
-        output_error(ctx, result.get('error', '添加失败'), result)
+        output_error(ctx, result.get('error', 'Addition failed'), result)
 
 
 @assembly_group.command('add-constraint')
-@click.option('--assembly', '-a', required=True, help='装配名称')
+@click.option('--assembly', '-a', required=True, help='Assembly name')
 @click.option('--type', '-t', required=True,
               type=click.Choice(['Coincident', 'Distance', 'Angle']),
-              help='约束类型')
-@click.option('--object1', '-o1', required=True, help='第一个对象')
-@click.option('--object2', '-o2', required=True, help='第二个对象')
+              help='Constraint type')
+@click.option('--object1', '-o1', required=True, help='First object')
+@click.option('--object2', '-o2', required=True, help='Second object')
 @click.pass_context
 def assembly_add_constraint(ctx, assembly, type, object1, object2):
-    """添加装配约束"""
+    """Add an assembly constraint"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.assembly_add_constraint(assembly, type, object1, object2)
 
     if result.get('success'):
-        output_result(ctx, result, f"约束添加成功")
+        output_result(ctx, result, f"Constraint added successfully")
     else:
-        output_error(ctx, result.get('error', '添加失败'), result)
+        output_error(ctx, result.get('error', 'Addition failed'), result)
 
 
 # ============================================================================
-# Path (CAM 加工) 命令组
+# Path (CAM) Command Group
 # ============================================================================
 
 @cli.group('path')
 def path_group():
-    """Path (CAM) 模块 - CNC 加工路径"""
+    """Path (CAM) module - CNC machining paths"""
     pass
 
 
 @path_group.command('create-job')
-@click.option('--name', '-n', required=True, help='任务名称')
-@click.option('--base', '-b', required=True, help='基础对象名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Job name')
+@click.option('--base', '-b', required=True, help='Base object name')
 @click.pass_context
 def path_create_job(ctx, name, base):
-    """创建加工任务"""
+    """Create a machining job"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.path_create_job(name, base)
 
     if result.get('success'):
-        output_result(ctx, result, f"加工任务 '{name}' 创建成功")
+        output_result(ctx, result, f"Machining job '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @path_group.command('add-operation')
-@click.option('--job', '-j', required=True, help='任务名称')
+@click.option('--job', '-j', required=True, help='Job name')
 @click.option('--type', '-t',
               type=click.Choice(['Drill', 'Profile', 'Pocket', 'Slot']),
               default='Drill',
-              help='操作类型')
+              help='Operation type')
 @click.pass_context
 def path_add_operation(ctx, job, type):
-    """添加加工操作"""
+    """Add a machining operation"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.path_add_operation(job, type)
 
     if result.get('success'):
-        output_result(ctx, result, f"操作 '{type}' 添加成功")
+        output_result(ctx, result, f"Operation '{type}' added successfully")
     else:
-        output_error(ctx, result.get('error', '添加失败'), result)
+        output_error(ctx, result.get('error', 'Addition failed'), result)
 
 
 @path_group.command('export-gcode')
-@click.option('--job', '-j', required=True, help='任务名称')
-@click.option('--filepath', '-f', required=True, help='导出文件路径')
-@click.option('--post', '-p', default='linuxcnc', help='后处理器')
+@click.option('--job', '-j', required=True, help='Job name')
+@click.option('--filepath', '-f', required=True, help='Export file path')
+@click.option('--post', '-p', default='linuxcnc', help='Post processor')
 @click.pass_context
 def path_export_gcode(ctx, job, filepath, post):
-    """导出 G-code"""
+    """Export G-code"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.path_export_gcode(job, filepath, post)
 
     if result.get('success'):
-        output_result(ctx, result, f"G-code 已导出到 {filepath}")
+        output_result(ctx, result, f"G-code exported to {filepath}")
     else:
-        output_error(ctx, result.get('error', '导出失败'), result)
+        output_error(ctx, result.get('error', 'Export failed'), result)
 
 
 # ============================================================================
-# FEM (有限元分析) 命令组
+# FEM (Finite Element Analysis) Command Group
 # ============================================================================
 
 @cli.group('fem')
 def fem_group():
-    """FEM (有限元分析) 模块 - 工程分析"""
+    """FEM (Finite Element Analysis) module - Engineering analysis"""
     pass
 
 
 @fem_group.command('create-analysis')
-@click.option('--name', '-n', required=True, help='分析名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Analysis name')
 @click.option('--type', '-t',
               type=click.Choice(['static', 'modal', 'thermomechanical']),
               default='static',
-              help='分析类型')
+              help='Analysis type')
 @click.pass_context
 def fem_create_analysis(ctx, name, type):
-    """创建有限元分析"""
+    """Create a finite element analysis"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.fem_create_analysis(name, type)
 
     if result.get('success'):
-        output_result(ctx, result, f"分析 '{name}' 创建成功")
+        output_result(ctx, result, f"Analysis '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @fem_group.command('add-material')
-@click.option('--analysis', '-a', required=True, help='分析名称')
+@click.option('--analysis', '-a', required=True, help='Analysis name')
 @click.option('--material', '-m',
               type=click.Choice(['Steel', 'Aluminum', 'Copper']),
               default='Steel',
-              help='材料')
+              help='Material')
 @click.pass_context
 def fem_add_material(ctx, analysis, material):
-    """添加材料"""
+    """Add material"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.fem_add_material(analysis, material)
 
     if result.get('success'):
-        output_result(ctx, result, f"材料 '{material}' 添加成功")
+        output_result(ctx, result, f"Material '{material}' added successfully")
     else:
-        output_error(ctx, result.get('error', '添加失败'), result)
+        output_error(ctx, result.get('error', 'Addition failed'), result)
 
 
 @fem_group.command('add-bc')
-@click.option('--analysis', '-a', required=True, help='分析名称')
+@click.option('--analysis', '-a', required=True, help='Analysis name')
 @click.option('--type', '-t',
               type=click.Choice(['Fixed', 'Force', 'Pressure']),
               required=True,
-              help='边界条件类型')
-@click.option('--object', '-o', required=True, help='对象名称')
+              help='Boundary condition type')
+@click.option('--object', '-o', required=True, help='Object name')
 @click.pass_context
 def fem_add_bc(ctx, analysis, type, object):
-    """添加边界条件"""
+    """Add boundary condition"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.fem_add_boundary_condition(analysis, type, object, {})
 
     if result.get('success'):
-        output_result(ctx, result, f"边界条件添加成功")
+        output_result(ctx, result, f"Boundary condition added successfully")
     else:
-        output_error(ctx, result.get('error', '添加失败'), result)
+        output_error(ctx, result.get('error', 'Addition failed'), result)
 
 
 @fem_group.command('run')
-@click.option('--analysis', '-a', required=True, help='分析名称')
+@click.option('--analysis', '-a', required=True, help='Analysis name')
 @click.pass_context
 def fem_run(ctx, analysis):
-    """运行有限元分析"""
+    """Run finite element analysis"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.fem_run_analysis(analysis)
 
     if result.get('success'):
-        output_result(ctx, result, f"分析 '{analysis}' 运行完成")
+        output_result(ctx, result, f"Analysis '{analysis}' run completed")
     else:
-        output_error(ctx, result.get('error', '运行失败'), result)
+        output_error(ctx, result.get('error', 'Run failed'), result)
 
 
 # ============================================================================
-# Image (图像) 命令组
+# Image Command Group
 # ============================================================================
 
 @cli.group('image')
 def image_group():
-    """Image (图像) 模块 - 图像处理"""
+    """Image module - Image processing"""
     pass
 
 
 @image_group.command('import')
-@click.option('--name', '-n', required=True, help='图像名称')
-@click.option('--filepath', '-f', required=True, help='图像文件路径')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Image name')
+@click.option('--filepath', '-f', required=True, help='Image file path')
 @click.pass_context
 def image_import(ctx, name, filepath):
-    """导入图像"""
+    """Import an image"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.image_import(name, filepath)
 
     if result.get('success'):
-        output_result(ctx, result, f"图像 '{name}' 导入成功")
+        output_result(ctx, result, f"Image '{name}' imported successfully")
     else:
-        output_error(ctx, result.get('error', '导入失败'), result)
+        output_error(ctx, result.get('error', 'Import failed'), result)
 
 
 @image_group.command('scale')
-@click.option('--name', '-n', required=True, help='图像名称')
-@click.option('--x', '-x', type=float, default=1.0, help='X 方向缩放')
-@click.option('--y', '-y', type=float, default=1.0, help='Y 方向缩放')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Image name')
+@click.option('--x', '-x', type=float, default=1.0, help='X scale')
+@click.option('--y', '-y', type=float, default=1.0, help='Y scale')
 @click.pass_context
 def image_scale(ctx, name, x, y):
-    """缩放图像"""
+    """Scale an image"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.image_scale(name, x, y)
 
     if result.get('success'):
-        output_result(ctx, result, f"图像 '{name}' 缩放成功")
+        output_result(ctx, result, f"Image '{name}' scaled successfully")
     else:
-        output_error(ctx, result.get('error', '缩放失败'), result)
+        output_error(ctx, result.get('error', 'Scale failed'), result)
 
 
 # ============================================================================
-# Material (材料) 命令组
+# Material Command Group
 # ============================================================================
 
 @cli.group('material')
 def material_group():
-    """Material (材料) 模块 - 材料管理"""
+    """Material module - Material management"""
     pass
 
 
 @material_group.command('create')
-@click.option('--name', '-n', required=True, help='材料名称')
-@click.option('--density', '-d', type=float, help='密度 (kg/m³)')
-@click.option('--youngs', '-y', type=float, help='杨氏模量 (MPa)')
-@click.option('--poisson', '-p', type=float, help='泊松比')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Material name')
+@click.option('--density', '-d', type=float, help='Density (kg/m³)')
+@click.option('--youngs', '-y', type=float, help='Youngs modulus (MPa)')
+@click.option('--poisson', '-p', type=float, help='Poisson ratio')
 @click.pass_context
 def material_create(ctx, name, density, youngs, poisson):
-    """创建材料"""
+    """Create a material"""
     properties = {}
     if density:
         properties['Density'] = f"{density} kg/m^3"
@@ -1475,16 +1480,16 @@ def material_create(ctx, name, density, youngs, poisson):
     result = wrapper.material_create(name, properties)
 
     if result.get('success'):
-        output_result(ctx, result, f"材料 '{name}' 创建成功")
+        output_result(ctx, result, f"Material '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @material_group.command('get-standard')
-@click.option('--name', '-n', required=True, help='材料名称')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Material name')
 @click.pass_context
 def material_get_standard(ctx, name):
-    """获取标准材料"""
+    """Get standard material"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.material_get_standard(name)
@@ -1492,53 +1497,53 @@ def material_get_standard(ctx, name):
 
 
 # ============================================================================
-# Inspection (检测) 命令组
+# Inspection Command Group
 # ============================================================================
 
 @cli.group('inspection')
 def inspection_group():
-    """Inspection (检测) 模块 - 检测和测量"""
+    """Inspection module - Inspection and measurement"""
     pass
 
 
 @inspection_group.command('create-check')
-@click.option('--name', '-n', required=True, help='检测名称')
-@click.option('--object', '-o', required=True, help='检测对象')
+@click.option('--name', '-n', required=True, type=NonEmptyString(), help='Check name')
+@click.option('--object', '-o', required=True, help='Object to check')
 @click.pass_context
 def inspection_create_check(ctx, name, object):
-    """创建检测"""
+    """Create an inspection"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.inspection_create_check(name, object)
 
     if result.get('success'):
-        output_result(ctx, result, f"检测 '{name}' 创建成功")
+        output_result(ctx, result, f"Inspection '{name}' created successfully")
     else:
-        output_error(ctx, result.get('error', '创建失败'), result)
+        output_error(ctx, result.get('error', 'Creation failed'), result)
 
 
 @inspection_group.command('measure-distance')
-@click.option('--object1', '-o1', required=True, help='第一个对象')
-@click.option('--object2', '-o2', required=True, help='第二个对象')
+@click.option('--object1', '-o1', required=True, help='First object')
+@click.option('--object2', '-o2', required=True, help='Second object')
 @click.pass_context
 def inspection_measure_distance(ctx, object1, object2):
-    """测量距离"""
+    """Measure distance"""
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
     result = wrapper.inspection_measure_distance(object1, object2)
 
     if result.get('success'):
-        output_result(ctx, result, f"距离测量结果")
+        output_result(ctx, result, f"Distance measurement result")
     else:
-        output_error(ctx, result.get('error', '测量失败'), result)
+        output_error(ctx, result.get('error', 'Measurement failed'), result)
 
 
 # ============================================================================
-# 主入口
+# Main Entry Point
 # ============================================================================
 
 def main():
-    """主入口点"""
+    """Main entry point"""
     cli(obj={})
 
 

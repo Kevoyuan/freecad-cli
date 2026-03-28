@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-FreeCAD Integration Module - FreeCAD 核心集成模块
-=================================================
+FreeCAD Integration Module
+==========================
 
-提供 FreeCAD Python API 的包装器，使 CLI 命令能够调用 FreeCAD 功能。
-此模块在 FreeCAD 导入失败时提供模拟模式用于测试。
+Provides a wrapper for the FreeCAD Python API, enabling CLI commands to invoke
+FreeCAD functionality. This module provides a mock mode for testing when FreeCAD
+import fails.
 """
 
 import sys
@@ -12,7 +13,7 @@ import ast
 from typing import Any, Dict, List, Optional, Tuple, Union
 from pathlib import Path
 
-# FreeCAD 导入状态跟踪
+# FreeCAD import status tracking
 FREECAD_AVAILABLE = False
 _freecad_module = None
 _part_module = None
@@ -29,7 +30,7 @@ _image_module = None
 
 
 def check_freecad() -> bool:
-    """检查 FreeCAD 是否可用"""
+    """Check if FreeCAD is available"""
     global FREECAD_AVAILABLE, _freecad_module, _part_module, _draft_module
     global _arch_module, _sketcher_module, _mesh_module, _surface_module
     global _techdraw_module, _spreadsheet_module, _path_module, _fem_module
@@ -55,7 +56,7 @@ def check_freecad() -> bool:
         _mesh_module = Mesh
         _surface_module = Surface
 
-        # 尝试导入可选模块
+        # Try to import optional modules
         try:
             import TechDraw
             _techdraw_module = TechDraw
@@ -94,14 +95,14 @@ def check_freecad() -> bool:
 
 
 class FreeCADWrapper:
-    """FreeCAD 功能包装器类"""
+    """FreeCAD functionality wrapper class"""
 
     def __init__(self, headless: bool = True):
         """
-        初始化 FreeCAD 包装器
+        Initialize FreeCAD wrapper
 
         Args:
-            headless: 是否使用无头模式 (无 GUI)
+            headless: Whether to use headless mode (no GUI)
         """
         self.headless = headless
         self._doc = None
@@ -109,24 +110,24 @@ class FreeCADWrapper:
 
     def initialize(self) -> Dict[str, Any]:
         """
-        初始化 FreeCAD 环境
+        Initialize FreeCAD environment
 
         Returns:
-            初始化状态信息
+            Initialization status information
         """
         if not check_freecad():
             return {
                 "success": False,
-                "error": "FreeCAD 未安装或无法导入",
+                "error": "FreeCAD is not installed or cannot be imported",
                 "available": False
             }
 
         try:
             if self.headless:
-                # 无头模式初始化
+                # Headless mode initialization
                 self._doc = _freecad_module.newDocument("CLI_Document")
             else:
-                # GUI 模式
+                # GUI mode
                 self._doc = _freecad_module.newDocument("CLI_Document")
 
             self._initialized = True
@@ -144,7 +145,7 @@ class FreeCADWrapper:
             }
 
     def get_document(self):
-        """获取当前文档对象"""
+        """Get the current document object"""
         if not self._doc:
             self.initialize()
         return self._doc
@@ -152,15 +153,15 @@ class FreeCADWrapper:
     def create_part(self, name: str, shape_type: str = "Box",
                    params: Optional[Dict[str, float]] = None) -> Dict[str, Any]:
         """
-        创建 Part (零件) 对象
+        Create a Part object
 
         Args:
-            name: 对象名称
-            shape_type: 形状类型 (Box, Cylinder, Sphere, Cone, Torus)
-            params: 形状参数
+            name: Object name
+            shape_type: Shape type (Box, Cylinder, Sphere, Cone, Torus)
+            params: Shape parameters
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Part", name, shape_type, params)
@@ -191,7 +192,7 @@ class FreeCADWrapper:
                 obj.Radius1 = params.get("radius1", 10.0)
                 obj.Radius2 = params.get("radius2", 2.0)
             else:
-                return {"success": False, "error": f"未知形状类型: {shape_type}"}
+                return {"success": False, "error": f"Unknown shape type: {shape_type}"}
 
             doc.recompute()
             return {
@@ -206,14 +207,14 @@ class FreeCADWrapper:
 
     def create_sketch(self, name: str, plane: str = "XY") -> Dict[str, Any]:
         """
-        创建草图对象
+        Create a sketch object
 
         Args:
-            name: 草图名称
-            plane: 草图平面 (XY, XZ, YZ)
+            name: Sketch name
+            plane: Sketch plane (XY, XZ, YZ)
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Sketch", name, params={"plane": plane})
@@ -223,7 +224,7 @@ class FreeCADWrapper:
         try:
             obj = doc.addObject("Sketcher::SketchObject", name)
 
-            # 设置草图平面
+            # Set sketch plane
             if plane == "XY":
                 obj.Support = [(doc.getObject("XY_Plane"), '')]
             elif plane == "XZ":
@@ -246,15 +247,15 @@ class FreeCADWrapper:
                            geometry_type: str,
                            params: Dict[str, float]) -> Dict[str, Any]:
         """
-        向草图添加几何元素
+        Add geometry element to sketch
 
         Args:
-            sketch_name: 草图名称
-            geometry_type: 几何类型 (Line, Circle, Arc, Rectangle, Polygon)
-            params: 几何参数
+            sketch_name: Sketch name
+            geometry_type: Geometry type (Line, Circle, Arc, Rectangle, Polygon)
+            params: Geometry parameters
 
         Returns:
-            添加结果信息
+            Addition result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Geometry", sketch_name, geometry_type, params)
@@ -264,7 +265,7 @@ class FreeCADWrapper:
         try:
             sketch = doc.getObject(sketch_name)
             if not sketch:
-                return {"success": False, "error": f"找不到草图: {sketch_name}"}
+                return {"success": False, "error": f"Sketch not found: {sketch_name}"}
 
             geo_id = -1
 
@@ -283,11 +284,11 @@ class FreeCADWrapper:
             elif geometry_type == "Rectangle":
                 p1 = (params.get("x1", 0), params.get("y1", 0))
                 p2 = (params.get("x2", 10), params.get("y2", 10))
-                # 添加矩形的四条边
+                # Add four edges of rectangle
                 for i in range(4):
                     geo_id = sketch.addGeometry(_sketcher_module.LineSegment(*p1, *p2))
             else:
-                return {"success": False, "error": f"不支持的几何类型: {geometry_type}"}
+                return {"success": False, "error": f"Unsupported geometry type: {geometry_type}"}
 
             doc.recompute()
             return {
@@ -301,15 +302,15 @@ class FreeCADWrapper:
     def create_draft_object(self, name: str, object_type: str,
                            params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        创建 Draft (草图绘制) 对象
+        Create a Draft object
 
         Args:
-            name: 对象名称
-            object_type: 对象类型 (Line, Polyline, Circle, Rectangle, Polygon, Arc)
-            params: 对象参数
+            name: Object name
+            object_type: Object type (Line, Polyline, Circle, Rectangle, Polygon, Arc)
+            params: Object parameters
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Draft", name, object_type, params)
@@ -343,7 +344,7 @@ class FreeCADWrapper:
                 points = params.get("points", [(0, 0), (10, 0), (10, 10)])
                 obj = _draft_module.makeWire(points, closed=params.get("closed", False))
             else:
-                return {"success": False, "error": f"未知 Draft 类型: {object_type}"}
+                return {"success": False, "error": f"Unknown Draft type: {object_type}"}
 
             obj.Label = name
             doc.recompute()
@@ -360,15 +361,15 @@ class FreeCADWrapper:
     def create_arch_object(self, name: str, object_type: str,
                           params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        创建 Arch (建筑) 对象
+        Create an Arch object
 
         Args:
-            name: 对象名称
-            object_type: 对象类型 (Wall, Structure, Window, Door, Roof, Stairs)
-            params: 对象参数
+            name: Object name
+            object_type: Object type (Wall, Structure, Window, Door, Roof, Stairs)
+            params: Object parameters
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Arch", name, object_type, params)
@@ -400,7 +401,7 @@ class FreeCADWrapper:
                     angle=params.get("angle", 25)
                 )
             else:
-                return {"success": False, "error": f"未知 Arch 类型: {object_type}"}
+                return {"success": False, "error": f"Unknown Arch type: {object_type}"}
 
             obj.Label = name
             doc.recompute()
@@ -417,16 +418,16 @@ class FreeCADWrapper:
     def boolean_operation(self, name: str, operation: str,
                          object1: str, object2: str) -> Dict[str, Any]:
         """
-        执行布尔运算
+        Perform boolean operation
 
         Args:
-            name: 结果对象名称
-            operation: 运算类型 (Fuse, Cut, Common, Section)
-            object1: 第一个对象名称
-            object2: 第二个对象名称
+            name: Result object name
+            operation: Operation type (Fuse, Cut, Common, Section)
+            object1: First object name
+            object2: Second object name
 
         Returns:
-            运算结果信息
+            Operation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Boolean", name, operation,
@@ -439,7 +440,7 @@ class FreeCADWrapper:
             obj2 = doc.getObject(object2)
 
             if not obj1 or not obj2:
-                return {"success": False, "error": "找不到指定的对象"}
+                return {"success": False, "error": "Specified object not found"}
 
             operation_map = {
                 "Fuse": "Part::MultiFuse",
@@ -466,21 +467,21 @@ class FreeCADWrapper:
             return {"success": False, "error": str(e)}
 
     # ============================================================================
-    # Mesh (网格) 模块
+    # Mesh module
     # ============================================================================
 
     def create_mesh_object(self, name: str, object_type: str,
                           params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        创建 Mesh (网格) 对象
+        Create a Mesh object
 
         Args:
-            name: 对象名称
-            object_type: 对象类型 (RegularMesh, Triangle, Grid)
-            params: 对象参数
+            name: Object name
+            object_type: Object type (RegularMesh, Triangle, Grid)
+            params: Object parameters
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Mesh", name, object_type, params)
@@ -490,11 +491,11 @@ class FreeCADWrapper:
 
         try:
             if object_type == "RegularMesh":
-                # 创建规则网格
+                # Create regular mesh
                 mesh = _mesh_module.Mesh()
-                # 生成网格参数
+                # Generate mesh parameters
                 segment_length = params.get("segment_length", 1.0)
-                # 简单的网格平面
+                # Simple mesh plane
                 for i in range(int(params.get("width", 10))):
                     for j in range(int(params.get("height", 10))):
                         p1 = (i * segment_length, j * segment_length, 0)
@@ -512,7 +513,7 @@ class FreeCADWrapper:
                 obj.Mesh = mesh
 
             elif object_type == "Triangle":
-                # 创建三角形网格
+                # Create triangle mesh
                 mesh = _mesh_module.Mesh()
                 points = params.get("points", [(0, 0, 0), (10, 0, 0), (5, 10, 0)])
                 if len(points) >= 3:
@@ -523,13 +524,13 @@ class FreeCADWrapper:
                 obj.Mesh = mesh
 
             elif object_type == "Grid":
-                # 创建网格线框
+                # Create mesh wireframe
                 mesh = _mesh_module.Mesh()
                 obj = doc.addObject("Mesh::Feature", name)
                 obj.Mesh = mesh
 
             else:
-                return {"success": False, "error": f"未知 Mesh 类型: {object_type}"}
+                return {"success": False, "error": f"Unknown Mesh type: {object_type}"}
 
             doc.recompute()
             return {
@@ -546,15 +547,15 @@ class FreeCADWrapper:
     def mesh_from_shape(self, name: str, source_name: str,
                        deflection: float = 0.1) -> Dict[str, Any]:
         """
-        从形状创建网格
+        Create mesh from shape
 
         Args:
-            name: 网格对象名称
-            source_name: 源形状对象名称
-            deflection: 网格偏转值 (精度)
+            name: Mesh object name
+            source_name: Source shape object name
+            deflection: Mesh deflection value (precision)
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Mesh", name, "from_shape",
@@ -565,12 +566,12 @@ class FreeCADWrapper:
         try:
             source = doc.getObject(source_name)
             if not source:
-                return {"success": False, "error": f"找不到源对象: {source_name}"}
+                return {"success": False, "error": f"Source object not found: {source_name}"}
 
             if not hasattr(source, 'Shape'):
-                return {"success": False, "error": "源对象没有 Shape 属性"}
+                return {"success": False, "error": "Source object does not have Shape property"}
 
-            # 创建网格
+            # Create mesh
             mesh = _mesh_module.Mesh(source.Shape, deflection)
 
             obj = doc.addObject("Mesh::Feature", name)
@@ -591,16 +592,16 @@ class FreeCADWrapper:
     def mesh_boolean(self, name: str, operation: str,
                     object1: str, object2: str) -> Dict[str, Any]:
         """
-        网格布尔运算
+        Mesh boolean operation
 
         Args:
-            name: 结果对象名称
-            operation: 运算类型 (Union, Intersection, Difference)
-            object1: 第一个网格对象
-            object2: 第二个网格对象
+            name: Result object name
+            operation: Operation type (Union, Intersection, Difference)
+            object1: First mesh object
+            object2: Second mesh object
 
         Returns:
-            运算结果信息
+            Operation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("MeshBoolean", name, operation,
@@ -613,7 +614,7 @@ class FreeCADWrapper:
             mesh2_obj = doc.getObject(object2)
 
             if not mesh1_obj or not mesh2_obj:
-                return {"success": False, "error": "找不到指定的对象"}
+                return {"success": False, "error": "Specified object not found"}
 
             mesh1 = mesh1_obj.Mesh
             mesh2 = mesh2_obj.Mesh
@@ -625,7 +626,7 @@ class FreeCADWrapper:
             elif operation == "Difference":
                 result_mesh = mesh1.subtract(mesh2)
             else:
-                return {"success": False, "error": f"未知运算: {operation}"}
+                return {"success": False, "error": f"Unknown operation: {operation}"}
 
             obj = doc.addObject("Mesh::Feature", name)
             obj.Mesh = result_mesh
@@ -642,21 +643,21 @@ class FreeCADWrapper:
             return {"success": False, "error": str(e)}
 
     # ============================================================================
-    # Surface (曲面) 模块
+    # Surface module
     # ============================================================================
 
     def create_surface(self, name: str, surface_type: str,
                       params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        创建 Surface (曲面) 对象
+        Create a Surface object
 
         Args:
-            name: 对象名称
-            surface_type: 曲面类型 (Fill, Sweep, Loft, Bezier)
-            params: 对象参数
+            name: Object name
+            surface_type: Surface type (Fill, Sweep, Loft, Bezier)
+            params: Object parameters
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Surface", name, surface_type, params)
@@ -676,7 +677,7 @@ class FreeCADWrapper:
             elif surface_type == "Bezier":
                 obj = doc.addObject("Surface::Bezier", name)
             else:
-                return {"success": False, "error": f"未知曲面类型: {surface_type}"}
+                return {"success": False, "error": f"Unknown surface type: {surface_type}"}
 
             doc.recompute()
             return {
@@ -690,14 +691,14 @@ class FreeCADWrapper:
 
     def surface_from_edges(self, name: str, sketch_name: str) -> Dict[str, Any]:
         """
-        从草图边界创建曲面
+        Create surface from sketch edges
 
         Args:
-            name: 曲面对象名称
-            sketch_name: 草图名称
+            name: Surface object name
+            sketch_name: Sketch name
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Surface", name, "from_edges",
@@ -708,7 +709,7 @@ class FreeCADWrapper:
         try:
             sketch = doc.getObject(sketch_name)
             if not sketch:
-                return {"success": False, "error": f"找不到草图: {sketch_name}"}
+                return {"success": False, "error": f"Sketch not found: {sketch_name}"}
 
             obj = doc.addObject("Surface::Fill", name)
             obj.Source = sketch
@@ -724,18 +725,18 @@ class FreeCADWrapper:
             return {"success": False, "error": str(e)}
 
     # ============================================================================
-    # PartDesign (零件设计) 模块
+    # PartDesign module
     # ============================================================================
 
     def create_partdesign_body(self, name: str) -> Dict[str, Any]:
         """
-        创建 PartDesign Body
+        Create PartDesign Body
 
         Args:
-            name: Body 名称
+            name: Body name
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("PartDesign", name, "Body", {})
@@ -759,17 +760,17 @@ class FreeCADWrapper:
                   sketch_name: str, length: float = 10.0,
                   direction: str = "Normal") -> Dict[str, Any]:
         """
-        创建 Pad (拉伸)
+        Create Pad (extrusion)
 
         Args:
-            name: Pad 名称
-            body_name: Body 名称
-            sketch_name: 草图名称
-            length: 拉伸长度
-            direction: 拉伸方向 (Normal, Reversed, Double)
+            name: Pad name
+            body_name: Body name
+            sketch_name: Sketch name
+            length: Extrusion length
+            direction: Extrusion direction (Normal, Reversed, Double)
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Pad", name, "Pad",
@@ -783,9 +784,9 @@ class FreeCADWrapper:
             sketch = doc.getObject(sketch_name)
 
             if not body:
-                return {"success": False, "error": f"找不到 Body: {body_name}"}
+                return {"success": False, "error": f"Body not found: {body_name}"}
             if not sketch:
-                return {"success": False, "error": f"找不到草图: {sketch_name}"}
+                return {"success": False, "error": f"Sketch not found: {sketch_name}"}
 
             pad = doc.addObject("PartDesign::Pad", name)
             pad.Profile = sketch
@@ -814,17 +815,17 @@ class FreeCADWrapper:
                      sketch_name: str, length: float = 10.0,
                      type: str = "Through") -> Dict[str, Any]:
         """
-        创建 Pocket (切除)
+        Create Pocket (cutout)
 
         Args:
-            name: Pocket 名称
-            body_name: Body 名称
-            sketch_name: 草图名称
-            length: 切除深度
-            type: 切除类型 (Through, UpToFirst, UpToFace)
+            name: Pocket name
+            body_name: Body name
+            sketch_name: Sketch name
+            length: Cutout depth
+            type: Cutout type (Through, UpToFirst, UpToFace)
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Pocket", name, "Pocket",
@@ -838,9 +839,9 @@ class FreeCADWrapper:
             sketch = doc.getObject(sketch_name)
 
             if not body:
-                return {"success": False, "error": f"找不到 Body: {body_name}"}
+                return {"success": False, "error": f"Body not found: {body_name}"}
             if not sketch:
-                return {"success": False, "error": f"找不到草图: {sketch_name}"}
+                return {"success": False, "error": f"Sketch not found: {sketch_name}"}
 
             pocket = doc.addObject("PartDesign::Pocket", name)
             pocket.Profile = sketch
@@ -870,17 +871,17 @@ class FreeCADWrapper:
                    diameter: float = 5.0, depth: float = 10.0,
                    position: Optional[Tuple[float, float, float]] = None) -> Dict[str, Any]:
         """
-        创建孔
+        Create hole
 
         Args:
-            name: 孔名称
-            body_name: Body 名称
-            diameter: 孔直径
-            depth: 孔深度
-            position: 孔位置 (x, y, z)
+            name: Hole name
+            body_name: Body name
+            diameter: Hole diameter
+            depth: Hole depth
+            position: Hole position (x, y, z)
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Hole", name, "Hole",
@@ -892,7 +893,7 @@ class FreeCADWrapper:
         try:
             body = doc.getObject(body_name)
             if not body:
-                return {"success": False, "error": f"找不到 Body: {body_name}"}
+                return {"success": False, "error": f"Body not found: {body_name}"}
 
             hole = doc.addObject("PartDesign::Hole", name)
             hole.Diameter = diameter
@@ -920,16 +921,16 @@ class FreeCADWrapper:
     def create_groove(self, name: str, body_name: str,
                      angle: float = 360.0, radius: float = 5.0) -> Dict[str, Any]:
         """
-        创建旋转切除 (Groove)
+        Create Groove (rotational cutout)
 
         Args:
-            name: Groove 名称
-            body_name: Body 名称
-            angle: 旋转角度
-            radius: 旋转半径
+            name: Groove name
+            body_name: Body name
+            angle: Rotation angle
+            radius: Rotation radius
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Groove", name, "Groove",
@@ -940,7 +941,7 @@ class FreeCADWrapper:
         try:
             body = doc.getObject(body_name)
             if not body:
-                return {"success": False, "error": f"找不到 Body: {body_name}"}
+                return {"success": False, "error": f"Body not found: {body_name}"}
 
             groove = doc.addObject("PartDesign::Groove", name)
             groove.Angle = angle
@@ -964,17 +965,17 @@ class FreeCADWrapper:
                          sketch_name: str, angle: float = 360.0,
                          axis: Optional[Tuple[int, int, int]] = None) -> Dict[str, Any]:
         """
-        创建旋转体 (Revolution)
+        Create Revolution
 
         Args:
-            name: Revolution 名称
-            body_name: Body 名称
-            sketch_name: 草图名称
-            angle: 旋转角度
-            axis: 旋转轴 (x, y, z) 方向
+            name: Revolution name
+            body_name: Body name
+            sketch_name: Sketch name
+            angle: Rotation angle
+            axis: Rotation axis (x, y, z) direction
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Revolution", name, "Revolution",
@@ -988,9 +989,9 @@ class FreeCADWrapper:
             sketch = doc.getObject(sketch_name)
 
             if not body:
-                return {"success": False, "error": f"找不到 Body: {body_name}"}
+                return {"success": False, "error": f"Body not found: {body_name}"}
             if not sketch:
-                return {"success": False, "error": f"找不到草图: {sketch_name}"}
+                return {"success": False, "error": f"Sketch not found: {sketch_name}"}
 
             revolution = doc.addObject("PartDesign::Revolution", name)
             revolution.Profile = sketch
@@ -1016,15 +1017,15 @@ class FreeCADWrapper:
     def create_fillet(self, name: str, body_name: str,
                      edge_radius: float = 2.0) -> Dict[str, Any]:
         """
-        创建圆角 (Fillet)
+        Create Fillet
 
         Args:
-            name: Fillet 名称
-            body_name: Body 名称
-            edge_radius: 圆角半径
+            name: Fillet name
+            body_name: Body name
+            edge_radius: Fillet radius
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Fillet", name, "Fillet",
@@ -1035,7 +1036,7 @@ class FreeCADWrapper:
         try:
             body = doc.getObject(body_name)
             if not body:
-                return {"success": False, "error": f"找不到 Body: {body_name}"}
+                return {"success": False, "error": f"Body not found: {body_name}"}
 
             fillet = doc.addObject("PartDesign::Fillet", name)
             fillet.Radius = edge_radius
@@ -1056,15 +1057,15 @@ class FreeCADWrapper:
     def create_chamfer(self, name: str, body_name: str,
                       chamfer_size: float = 1.0) -> Dict[str, Any]:
         """
-        创建倒角 (Chamfer)
+        Create Chamfer
 
         Args:
-            name: Chamfer 名称
-            body_name: Body 名称
-            chamfer_size: 倒角大小
+            name: Chamfer name
+            body_name: Body name
+            chamfer_size: Chamfer size
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Chamfer", name, "Chamfer",
@@ -1075,7 +1076,7 @@ class FreeCADWrapper:
         try:
             body = doc.getObject(body_name)
             if not body:
-                return {"success": False, "error": f"找不到 Body: {body_name}"}
+                return {"success": False, "error": f"Body not found: {body_name}"}
 
             chamfer = doc.addObject("PartDesign::Chamfer", name)
             chamfer.Size = chamfer_size
@@ -1095,14 +1096,14 @@ class FreeCADWrapper:
 
     def export_document(self, filepath: str, format_type: str = "STEP") -> Dict[str, Any]:
         """
-        导出文档
+        Export document
 
         Args:
-            filepath: 导出文件路径
-            format_type: 导出格式 (STEP, STL, OBJ, IGES, BREP, DXF)
+            filepath: Export file path
+            format_type: Export format (STEP, STL, OBJ, IGES, BREP, DXF)
 
         Returns:
-            导出结果信息
+            Export result information
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -1138,13 +1139,13 @@ class FreeCADWrapper:
 
     def get_object_info(self, object_name: str) -> Dict[str, Any]:
         """
-        获取对象信息
+        Get object information
 
         Args:
-            object_name: 对象名称
+            object_name: Object name
 
         Returns:
-            对象详细信息
+            Object detailed information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Info", object_name)
@@ -1154,7 +1155,7 @@ class FreeCADWrapper:
         try:
             obj = doc.getObject(object_name)
             if not obj:
-                return {"success": False, "error": f"找不到对象: {object_name}"}
+                return {"success": False, "error": f"Object not found: {object_name}"}
 
             info = {
                 "success": True,
@@ -1164,7 +1165,7 @@ class FreeCADWrapper:
                 "module": obj.Module if hasattr(obj, 'Module') else "Unknown"
             }
 
-            # 添加几何信息
+            # Add geometry information
             if hasattr(obj, 'Shape') and obj.Shape:
                 shape = obj.Shape
                 info["geometry"] = {
@@ -1179,13 +1180,13 @@ class FreeCADWrapper:
 
     def list_objects(self, filter_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        列出文档中的对象
+        List objects in document
 
         Args:
-            filter_type: 对象类型过滤器 (可选)
+            filter_type: Object type filter (optional)
 
         Returns:
-            对象列表
+            List of objects
         """
         if not FREECAD_AVAILABLE:
             return [
@@ -1215,13 +1216,13 @@ class FreeCADWrapper:
 
     def delete_object(self, object_name: str) -> Dict[str, Any]:
         """
-        删除对象
+        Delete object
 
         Args:
-            object_name: 要删除的对象名称
+            object_name: Name of object to delete
 
         Returns:
-            删除结果信息
+            Deletion result information
         """
         if not FREECAD_AVAILABLE:
             return {"success": True, "deleted": object_name, "mock": True}
@@ -1231,7 +1232,7 @@ class FreeCADWrapper:
         try:
             obj = doc.getObject(object_name)
             if not obj:
-                return {"success": False, "error": f"找不到对象: {object_name}"}
+                return {"success": False, "error": f"Object not found: {object_name}"}
 
             doc.removeObject(object_name)
             return {"success": True, "deleted": object_name}
@@ -1239,19 +1240,19 @@ class FreeCADWrapper:
             return {"success": False, "error": str(e)}
 
     # ============================================================================
-    # TechDraw (工程图) 模块
+    # TechDraw module
     # ============================================================================
 
     def techdraw_create_page(self, name: str, template: str = "A4_Landscape") -> Dict[str, Any]:
         """
-        创建 TechDraw 页面
+        Create TechDraw page
 
         Args:
-            name: 页面名称
-            template: 图纸模板 (A4_Landscape, A4_Portrait, A3_Landscape, etc.)
+            name: Page name
+            template: Drawing template (A4_Landscape, A4_Portrait, A3_Landscape, etc.)
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("TechDraw", name, "Page", {"template": template})
@@ -1292,15 +1293,15 @@ class FreeCADWrapper:
     def techdraw_add_view(self, page_name: str, source_name: str,
                          projection_type: str = "FirstAngle") -> Dict[str, Any]:
         """
-        添加工程视图
+        Add engineering view
 
         Args:
-            page_name: 页面名称
-            source_name: 源对象名称
-            projection_type: 投影类型 (FirstAngle, ThirdAngle)
+            page_name: Page name
+            source_name: Source object name
+            projection_type: Projection type (FirstAngle, ThirdAngle)
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("TechDraw", "View", "View",
@@ -1313,9 +1314,9 @@ class FreeCADWrapper:
             source = doc.getObject(source_name)
 
             if not page:
-                return {"success": False, "error": f"找不到页面: {page_name}"}
+                return {"success": False, "error": f"Page not found: {page_name}"}
             if not source:
-                return {"success": False, "error": f"找不到源对象: {source_name}"}
+                return {"success": False, "error": f"Source object not found: {source_name}"}
 
             view = doc.addObject("TechDraw::DrawViewPart", f"View_{source_name}")
             view.Source = [source]
@@ -1339,15 +1340,15 @@ class FreeCADWrapper:
     def techdraw_add_dimension(self, view_name: str, dimension_type: str,
                               points: List[Tuple[float, float]]) -> Dict[str, Any]:
         """
-        添加尺寸标注
+        Add dimension annotation
 
         Args:
-            view_name: 视图名称
-            dimension_type: 尺寸类型 (Horizontal, Vertical, Radius, Diameter, Angle)
-            points: 尺寸点列表
+            view_name: View name
+            dimension_type: Dimension type (Horizontal, Vertical, Radius, Diameter, Angle)
+            points: List of dimension points
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("TechDraw", "Dimension", dimension_type,
@@ -1358,7 +1359,7 @@ class FreeCADWrapper:
         try:
             view = doc.getObject(view_name)
             if not view:
-                return {"success": False, "error": f"找不到视图: {view_name}"}
+                return {"success": False, "error": f"View not found: {view_name}"}
 
             dim = doc.addObject("TechDraw::DrawViewDimension", f"Dim_{dimension_type}")
             dim.Type = dimension_type
@@ -1382,15 +1383,15 @@ class FreeCADWrapper:
     def techdraw_export(self, page_name: str, filepath: str,
                        format_type: str = "PDF") -> Dict[str, Any]:
         """
-        导出工程图
+        Export engineering drawing
 
         Args:
-            page_name: 页面名称
-            filepath: 导出文件路径
-            format_type: 导出格式 (PDF, SVG, DXF)
+            page_name: Page name
+            filepath: Export file path
+            format_type: Export format (PDF, SVG, DXF)
 
         Returns:
-            导出结果信息
+            Export result information
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -1406,9 +1407,9 @@ class FreeCADWrapper:
         try:
             page = doc.getObject(page_name)
             if not page:
-                return {"success": False, "error": f"找不到页面: {page_name}"}
+                return {"success": False, "error": f"Page not found: {page_name}"}
 
-            # 导出
+            # Export
             if format_type == "PDF":
                 _freecad_module.export([page], filepath)
             elif format_type == "SVG":
@@ -1426,18 +1427,18 @@ class FreeCADWrapper:
             return {"success": False, "error": str(e)}
 
     # ============================================================================
-    # Spreadsheet (电子表格) 模块
+    # Spreadsheet module
     # ============================================================================
 
     def spreadsheet_create(self, name: str) -> Dict[str, Any]:
         """
-        创建电子表格
+        Create spreadsheet
 
         Args:
-            name: 表格名称
+            name: Spreadsheet name
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Spreadsheet", name, "Sheet", {})
@@ -1460,15 +1461,15 @@ class FreeCADWrapper:
     def spreadsheet_set_cell(self, sheet_name: str, cell: str,
                            value: Any) -> Dict[str, Any]:
         """
-        设置单元格值
+        Set cell value
 
         Args:
-            sheet_name: 表格名称
-            cell: 单元格地址 (如 "A1")
-            value: 单元格值
+            sheet_name: Spreadsheet name
+            cell: Cell address (e.g., "A1")
+            value: Cell value
 
         Returns:
-            设置结果信息
+            Setting result information
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -1484,7 +1485,7 @@ class FreeCADWrapper:
         try:
             sheet = doc.getObject(sheet_name)
             if not sheet:
-                return {"success": False, "error": f"找不到表格: {sheet_name}"}
+                return {"success": False, "error": f"Spreadsheet not found: {sheet_name}"}
 
             sheet.set(cell, str(value))
             doc.recompute()
@@ -1501,15 +1502,15 @@ class FreeCADWrapper:
     def spreadsheet_set_formula(self, sheet_name: str, cell: str,
                               formula: str) -> Dict[str, Any]:
         """
-        设置单元格公式
+        Set cell formula
 
         Args:
-            sheet_name: 表格名称
-            cell: 单元格地址
-            formula: 公式 (如 "=A1*2")
+            sheet_name: Spreadsheet name
+            cell: Cell address
+            formula: Formula (e.g., "=A1*2")
 
         Returns:
-            设置结果信息
+            Setting result information
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -1525,7 +1526,7 @@ class FreeCADWrapper:
         try:
             sheet = doc.getObject(sheet_name)
             if not sheet:
-                return {"success": False, "error": f"找不到表格: {sheet_name}"}
+                return {"success": False, "error": f"Spreadsheet not found: {sheet_name}"}
 
             sheet.set(cell, formula)
             doc.recompute()
@@ -1542,16 +1543,16 @@ class FreeCADWrapper:
     def spreadsheet_link(self, sheet_name: str, object_name: str,
                         property_name: str, cell: str) -> Dict[str, Any]:
         """
-        链接电子表格到对象属性
+        Link spreadsheet to object property
 
         Args:
-            sheet_name: 表格名称
-            object_name: 对象名称
-            property_name: 属性名称
-            cell: 单元格地址
+            sheet_name: Spreadsheet name
+            object_name: Object name
+            property_name: Property name
+            cell: Cell address
 
         Returns:
-            链接结果信息
+            Link result information
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -1570,11 +1571,11 @@ class FreeCADWrapper:
             obj = doc.getObject(object_name)
 
             if not sheet:
-                return {"success": False, "error": f"找不到表格: {sheet_name}"}
+                return {"success": False, "error": f"Spreadsheet not found: {sheet_name}"}
             if not obj:
-                return {"success": False, "error": f"找不到对象: {object_name}"}
+                return {"success": False, "error": f"Object not found: {object_name}"}
 
-            # 设置链接
+            # Set link
             sheet.set(cell, f"{object_name}.{property_name}")
             doc.recompute()
 
@@ -1589,18 +1590,18 @@ class FreeCADWrapper:
             return {"success": False, "error": str(e)}
 
     # ============================================================================
-    # Assembly (装配) 模块
+    # Assembly module
     # ============================================================================
 
     def assembly_create(self, name: str) -> Dict[str, Any]:
         """
-        创建装配
+        Create assembly
 
         Args:
-            name: 装配名称
+            name: Assembly name
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Assembly", name, "Assembly", {})
@@ -1623,15 +1624,15 @@ class FreeCADWrapper:
     def assembly_add_part(self, assembly_name: str, part_name: str,
                          placement: str = "[0, 0, 0]") -> Dict[str, Any]:
         """
-        向装配添加零件
+        Add part to assembly
 
         Args:
-            assembly_name: 装配名称
-            part_name: 零件名称
-            placement: 位置 [x, y, z]
+            assembly_name: Assembly name
+            part_name: Part name
+            placement: Position [x, y, z]
 
         Returns:
-            添加结果信息
+            Addition result information
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -1649,21 +1650,21 @@ class FreeCADWrapper:
             part = doc.getObject(part_name)
 
             if not assembly:
-                return {"success": False, "error": f"找不到装配: {assembly_name}"}
+                return {"success": False, "error": f"Assembly not found: {assembly_name}"}
             if not part:
-                return {"success": False, "error": f"找不到零件: {part_name}"}
+                return {"success": False, "error": f"Part not found: {part_name}"}
 
-            # 添加零件到装配
+            # Add part to assembly
             assembly.addObject(part)
 
-            # 设置位置 (使用 ast.literal_eval 安全解析)
+            # Set placement (use ast.literal_eval for safe parsing)
             try:
                 import FreeCAD
                 placement_list = ast.literal_eval(placement)
                 if len(placement_list) == 3:
                     part.Placement.Base = FreeCAD.Vector(*placement_list)
             except (ValueError, SyntaxError):
-                pass  # 保持默认位置
+                pass  # Keep default position
 
             doc.recompute()
 
@@ -1680,17 +1681,17 @@ class FreeCADWrapper:
                                object1: str, object2: str,
                                parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        添加装配约束
+        Add assembly constraint
 
         Args:
-            assembly_name: 装配名称
-            constraint_type: 约束类型 (Coincident, Distance, Angle, etc.)
-            object1: 第一个对象
-            object2: 第二个对象
-            parameters: 约束参数
+            assembly_name: Assembly name
+            constraint_type: Constraint type (Coincident, Distance, Angle, etc.)
+            object1: First object
+            object2: Second object
+            parameters: Constraint parameters
 
         Returns:
-            添加结果信息
+            Addition result information
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -1707,9 +1708,9 @@ class FreeCADWrapper:
         try:
             assembly = doc.getObject(assembly_name)
             if not assembly:
-                return {"success": False, "error": f"找不到装配: {assembly_name}"}
+                return {"success": False, "error": f"Assembly not found: {assembly_name}"}
 
-            # 创建约束
+            # Create constraint
             constraint = doc.addObject("Part::Feature", f"Constraint_{constraint_type}")
 
             doc.recompute()
@@ -1725,19 +1726,19 @@ class FreeCADWrapper:
             return {"success": False, "error": str(e)}
 
     # ============================================================================
-    # Path (CAM 加工) 模块
+    # Path (CAM machining) module
     # ============================================================================
 
     def path_create_job(self, name: str, base_name: str) -> Dict[str, Any]:
         """
-        创建加工任务
+        Create machining job
 
         Args:
-            name: 任务名称
-            base_name: 基础对象名称
+            name: Job name
+            base_name: Base object name
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Path", name, "Job", {"base": base_name})
@@ -1747,7 +1748,7 @@ class FreeCADWrapper:
         try:
             base = doc.getObject(base_name)
             if not base:
-                return {"success": False, "error": f"找不到基础对象: {base_name}"}
+                return {"success": False, "error": f"Base object not found: {base_name}"}
 
             job = doc.addObject("Path::Job", name)
             job.Base = base
@@ -1767,15 +1768,15 @@ class FreeCADWrapper:
     def path_add_operation(self, job_name: str, operation_type: str,
                           parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        添加加工操作
+        Add machining operation
 
         Args:
-            job_name: 任务名称
-            operation_type: 操作类型 (Drill, Profile, Pocket, etc.)
-            parameters: 操作参数
+            job_name: Job name
+            operation_type: Operation type (Drill, Profile, Pocket, etc.)
+            parameters: Operation parameters
 
         Returns:
-            添加结果信息
+            Addition result information
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -1791,7 +1792,7 @@ class FreeCADWrapper:
         try:
             job = doc.getObject(job_name)
             if not job:
-                return {"success": False, "error": f"找不到任务: {job_name}"}
+                return {"success": False, "error": f"Job not found: {job_name}"}
 
             operation = doc.addObject("Path::Feature", f"Op_{operation_type}")
             job.addObject(operation)
@@ -1811,15 +1812,15 @@ class FreeCADWrapper:
     def path_export_gcode(self, job_name: str, filepath: str,
                          post_processor: str = "linuxcnc") -> Dict[str, Any]:
         """
-        导出 G-code
+        Export G-code
 
         Args:
-            job_name: 任务名称
-            filepath: 导出文件路径
-            post_processor: 后处理器 (linuxcnc, grbl, etc.)
+            job_name: Job name
+            filepath: Export file path
+            post_processor: Post processor (linuxcnc, grbl, etc.)
 
         Returns:
-            导出结果信息
+            Export result information
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -1835,9 +1836,9 @@ class FreeCADWrapper:
         try:
             job = doc.getObject(job_name)
             if not job:
-                return {"success": False, "error": f"找不到任务: {job_name}"}
+                return {"success": False, "error": f"Job not found: {job_name}"}
 
-            # 导出 G-code
+            # Export G-code
             _freecad_module.export([job], filepath)
 
             return {
@@ -1850,19 +1851,19 @@ class FreeCADWrapper:
             return {"success": False, "error": str(e)}
 
     # ============================================================================
-    # FEM (有限元分析) 模块
+    # FEM (Finite Element Analysis) module
     # ============================================================================
 
     def fem_create_analysis(self, name: str, analysis_type: str = "static") -> Dict[str, Any]:
         """
-        创建有限元分析
+        Create finite element analysis
 
         Args:
-            name: 分析名称
-            analysis_type: 分析类型 (static, modal, thermomechanical)
+            name: Analysis name
+            analysis_type: Analysis type (static, modal, thermomechanical)
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("FEM", name, "Analysis", {"type": analysis_type})
@@ -1885,14 +1886,14 @@ class FreeCADWrapper:
 
     def fem_add_material(self, analysis_name: str, material: str = "Steel") -> Dict[str, Any]:
         """
-        添加材料到分析
+        Add material to analysis
 
         Args:
-            analysis_name: 分析名称
-            material: 材料名称 (Steel, Aluminum, etc.)
+            analysis_name: Analysis name
+            material: Material name (Steel, Aluminum, etc.)
 
         Returns:
-            添加结果信息
+            Addition result information
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -1907,7 +1908,7 @@ class FreeCADWrapper:
         try:
             analysis = doc.getObject(analysis_name)
             if not analysis:
-                return {"success": False, "error": f"找不到分析: {analysis_name}"}
+                return {"success": False, "error": f"Analysis not found: {analysis_name}"}
 
             material_obj = doc.addObject("Fem::Material", f"Material_{material}")
             material_obj.Material = {"Name": material}
@@ -1928,16 +1929,16 @@ class FreeCADWrapper:
                                   object_name: str,
                                   parameters: Dict[str, Any]) -> Dict[str, Any]:
         """
-        添加边界条件
+        Add boundary condition
 
         Args:
-            analysis_name: 分析名称
-            bc_type: 边界条件类型 (Fixed, Force, Pressure)
-            object_name: 对象名称
-            parameters: 边界条件参数
+            analysis_name: Analysis name
+            bc_type: Boundary condition type (Fixed, Force, Pressure)
+            object_name: Object name
+            parameters: Boundary condition parameters
 
         Returns:
-            添加结果信息
+            Addition result information
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -1954,7 +1955,7 @@ class FreeCADWrapper:
         try:
             analysis = doc.getObject(analysis_name)
             if not analysis:
-                return {"success": False, "error": f"找不到分析: {analysis_name}"}
+                return {"success": False, "error": f"Analysis not found: {analysis_name}"}
 
             bc = doc.addObject("Fem::Constraint", f"BC_{bc_type}")
 
@@ -1973,13 +1974,13 @@ class FreeCADWrapper:
 
     def fem_run_analysis(self, analysis_name: str) -> Dict[str, Any]:
         """
-        运行有限元分析
+        Run finite element analysis
 
         Args:
-            analysis_name: 分析名称
+            analysis_name: Analysis name
 
         Returns:
-            运行结果信息
+            Run result information
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -1994,9 +1995,9 @@ class FreeCADWrapper:
         try:
             analysis = doc.getObject(analysis_name)
             if not analysis:
-                return {"success": False, "error": f"找不到分析: {analysis_name}"}
+                return {"success": False, "error": f"Analysis not found: {analysis_name}"}
 
-            # 运行分析 (需要求解器)
+            # Run analysis (requires solver)
             doc.recompute()
 
             return {
@@ -2008,19 +2009,19 @@ class FreeCADWrapper:
             return {"success": False, "error": str(e)}
 
     # ============================================================================
-    # Image (图像) 模块
+    # Image module
     # ============================================================================
 
     def image_import(self, name: str, filepath: str) -> Dict[str, Any]:
         """
-        导入图像
+        Import image
 
         Args:
-            name: 图像名称
-            filepath: 图像文件路径
+            name: Image name
+            filepath: Image file path
 
         Returns:
-            导入结果信息
+            Import result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Image", name, "Image", {"filepath": filepath})
@@ -2046,15 +2047,15 @@ class FreeCADWrapper:
     def image_scale(self, name: str, scale_x: float = 1.0,
                    scale_y: float = 1.0) -> Dict[str, Any]:
         """
-        缩放图像
+        Scale image
 
         Args:
-            name: 图像名称
-            scale_x: X 方向缩放
-            scale_y: Y 方向缩放
+            name: Image name
+            scale_x: X direction scale
+            scale_y: Y direction scale
 
         Returns:
-            缩放结果信息
+            Scale result information
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -2070,7 +2071,7 @@ class FreeCADWrapper:
         try:
             image = doc.getObject(name)
             if not image:
-                return {"success": False, "error": f"找不到图像: {name}"}
+                return {"success": False, "error": f"Image not found: {name}"}
 
             image.XSize = image.XSize * scale_x
             image.YSize = image.YSize * scale_y
@@ -2087,19 +2088,19 @@ class FreeCADWrapper:
             return {"success": False, "error": str(e)}
 
     # ============================================================================
-    # Material (材料) 模块
+    # Material module
     # ============================================================================
 
     def material_create(self, name: str, properties: Dict[str, Any]) -> Dict[str, Any]:
         """
-        创建材料
+        Create material
 
         Args:
-            name: 材料名称
-            properties: 材料属性 (density, youngs_modulus, etc.)
+            name: Material name
+            properties: Material properties (density, youngs_modulus, etc.)
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Material", name, "Material", properties)
@@ -2124,15 +2125,15 @@ class FreeCADWrapper:
 
     def material_get_standard(self, material_name: str) -> Dict[str, Any]:
         """
-        获取标准材料
+        Get standard material
 
         Args:
-            material_name: 材料名称 (Steel, Aluminum, etc.)
+            material_name: Material name (Steel, Aluminum, etc.)
 
         Returns:
-            材料信息
+            Material information
         """
-        # 标准材料库
+        # Standard material library
         materials = {
             "Steel": {
                 "Name": "Steel",
@@ -2166,24 +2167,24 @@ class FreeCADWrapper:
         else:
             return {
                 "success": False,
-                "error": f"未知材料: {material_name}",
+                "error": f"Unknown material: {material_name}",
                 "available_materials": list(materials.keys())
             }
 
     # ============================================================================
-    # Inspection (检测) 模块
+    # Inspection module
     # ============================================================================
 
     def inspection_create_check(self, name: str, object_name: str) -> Dict[str, Any]:
         """
-        创建检测
+        Create inspection
 
         Args:
-            name: 检测名称
-            object_name: 检测对象名称
+            name: Inspection name
+            object_name: Object to inspect name
 
         Returns:
-            创建结果信息
+            Creation result information
         """
         if not FREECAD_AVAILABLE:
             return self._mock_result("Inspection", name, "Check", {"object": object_name})
@@ -2193,7 +2194,7 @@ class FreeCADWrapper:
         try:
             obj = doc.getObject(object_name)
             if not obj:
-                return {"success": False, "error": f"找不到对象: {object_name}"}
+                return {"success": False, "error": f"Object not found: {object_name}"}
 
             check = doc.addObject("Inspection::Feature", name)
 
@@ -2211,14 +2212,14 @@ class FreeCADWrapper:
 
     def inspection_measure_distance(self, object1: str, object2: str) -> Dict[str, Any]:
         """
-        测量距离
+        Measure distance
 
         Args:
-            object1: 第一个对象
-            object2: 第二个对象
+            object1: First object
+            object2: Second object
 
         Returns:
-            测量结果
+            Measurement result
         """
         if not FREECAD_AVAILABLE:
             return {
@@ -2236,11 +2237,11 @@ class FreeCADWrapper:
             obj2 = doc.getObject(object2)
 
             if not obj1:
-                return {"success": False, "error": f"找不到对象: {object1}"}
+                return {"success": False, "error": f"Object not found: {object1}"}
             if not obj2:
-                return {"success": False, "error": f"找不到对象: {object2}"}
+                return {"success": False, "error": f"Object not found: {object2}"}
 
-            # 计算距离 (简化)
+            # Calculate distance (simplified)
             distance = 10.0
 
             return {
@@ -2253,7 +2254,7 @@ class FreeCADWrapper:
             return {"success": False, "error": str(e)}
 
     def _get_bounding_box(self, obj) -> Dict[str, float]:
-        """获取对象的边界框"""
+        """Get bounding box of object"""
         try:
             if hasattr(obj, 'Shape') and obj.Shape:
                 bb = obj.Shape.BoundBox
@@ -2271,7 +2272,7 @@ class FreeCADWrapper:
 
     def _mock_result(self, category: str, name: str,
                     sub_type: str = "", params: Any = None) -> Dict[str, Any]:
-        """返回模拟结果 (FreeCAD 未安装时使用)"""
+        """Return mock result (used when FreeCAD is not installed)"""
         return {
             "success": True,
             "mock": True,
@@ -2279,16 +2280,16 @@ class FreeCADWrapper:
             "name": name,
             "type": sub_type,
             "params": params,
-            "message": "FreeCAD 未安装 - 返回模拟数据"
+            "message": "FreeCAD not installed - returning mock data"
         }
 
 
-# 全局包装器实例
+# Global wrapper instance
 _wrapper = None
 
 
 def get_wrapper(headless: bool = True) -> FreeCADWrapper:
-    """获取全局包装器实例"""
+    """Get global wrapper instance"""
     global _wrapper
     if _wrapper is None:
         _wrapper = FreeCADWrapper(headless=headless)

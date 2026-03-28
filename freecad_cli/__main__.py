@@ -3,13 +3,13 @@
 FreeCAD CLI - Direct Execution Entry Point
 ===========================================
 
-允许直接使用 `python -m freecad_cli` 运行
+Allows running directly with `python -m freecad_cli`
 """
 
 import sys
 from pathlib import Path
 
-# 添加父目录到路径，使 freecad_cli 作为包可导入
+# Add parent directory to path to make freecad_cli importable as a package
 _package_dir = Path(__file__).parent
 _parent_dir = _package_dir.parent
 if str(_parent_dir) not in sys.path:
