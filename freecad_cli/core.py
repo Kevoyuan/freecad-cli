@@ -27,6 +27,11 @@ from typing import Any, Dict, List, Optional
 
 import click
 
+# Exit codes
+EXIT_GENERAL = 1
+EXIT_USAGE = 2
+EXIT_FREECAD = 3
+
 try:
     from .formatter import get_formatter, OutputFormatter
     from .freecad_integration import get_wrapper, check_freecad, FreeCADWrapper
@@ -85,11 +90,16 @@ def output_result(ctx, result: Any, message: str = "", status: str = "success"):
     click.echo(formatter.format(result, status=status, message=message))
 
 
-def output_error(ctx, message: str, details: Any = None):
+def output_error(ctx, message: str, details: Any = None, exit_code: int = EXIT_GENERAL):
     """Output error message"""
     formatter: OutputFormatter = ctx.obj['FORMATTER']
     click.echo(formatter.error(message, details), err=True)
-    sys.exit(1)
+    sys.exit(exit_code)
+
+
+def output_freecad_error(ctx, message: str, details: Any = None):
+    """Output FreeCAD-specific error message"""
+    output_error(ctx, message, details, exit_code=EXIT_FREECAD)
 
 
 # ============================================================================
@@ -130,7 +140,7 @@ def document_info(ctx):
     init_result = wrapper.initialize()
 
     if not init_result.get('success'):
-        output_error(ctx, "Failed to initialize FreeCAD", init_result)
+        output_freecad_error(ctx, "Failed to initialize FreeCAD", init_result)
 
     doc = wrapper.get_document()
     info = {
@@ -167,7 +177,7 @@ def part_create(ctx, name, type, params):
     try:
         params_dict = json.loads(params)
     except json.JSONDecodeError:
-        output_error(ctx, "Parameters must be valid JSON format")
+        output_error(ctx, "Parameters must be valid JSON format", exit_code=EXIT_USAGE)
 
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
@@ -757,7 +767,7 @@ def mesh_create(ctx, name, type, params):
     try:
         params_dict = json.loads(params)
     except json.JSONDecodeError:
-        output_error(ctx, "Parameters must be valid JSON format")
+        output_error(ctx, "Parameters must be valid JSON format", exit_code=EXIT_USAGE)
 
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
@@ -842,7 +852,7 @@ def surface_create(ctx, name, type, params):
     try:
         params_dict = json.loads(params)
     except json.JSONDecodeError:
-        output_error(ctx, "Parameters must be valid JSON format")
+        output_error(ctx, "Parameters must be valid JSON format", exit_code=EXIT_USAGE)
 
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()
@@ -955,7 +965,7 @@ def partdesign_hole(ctx, name, body, diameter, depth, position):
         try:
             pos = tuple(map(float, position.split(',')))
         except ValueError:
-            output_error(ctx, "Position must be in x,y,z format")
+            output_error(ctx, "Position must be in x,y,z format", exit_code=EXIT_USAGE)
 
     wrapper = get_wrapper(ctx.obj['HEADLESS'])
     wrapper.initialize()

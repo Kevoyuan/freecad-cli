@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 Unit Tests for FreeCAD Wrapper
+
+These tests run in mock mode (FreeCAD not required).
+To also run integration tests (requires FreeCAD installed):
+    pytest tests/ -m integration
+
+FreeCAD integration tests are automatically skipped when FreeCAD is not available.
 """
 
 import pytest
