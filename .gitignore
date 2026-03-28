@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 *.so
 .Python
 *.egg-info/
@@ -11,6 +12,7 @@ __pycache__/
 .venv/
 venv/
 ENV/
+.env
 
 # Pytest
 .pytest_cache/
@@ -18,7 +20,6 @@ ENV/
 *.cover
 
 # Build artifacts
-bin/
 build/
 dist/
 *.egg
@@ -38,3 +39,15 @@ dist/
 
 # Lock file
 requirements.lock
+
+# Node (npm wrapper)
+node_modules/
+npm-debug.log*
+
+# Logs
+*.log
+
+# FreeCAD temp files
+*.FCStd
+*.FCStd1
+*.FCStdBak

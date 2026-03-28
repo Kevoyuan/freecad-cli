@@ -1,5 +1,6 @@
 module.exports = {
-  extends: ['@commitlint/config-conventional'],
+  // Self-contained config — no external packages needed.
+  // Shell hook at scripts/validate-commit-msg.sh is the primary enforcement.
   rules: {
     'type-enum': [
       2,

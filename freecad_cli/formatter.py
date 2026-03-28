@@ -96,23 +96,26 @@ class OutputFormatter:
 
     def _format_table(self, data: Any) -> str:
         """Table formatting"""
-        if isinstance(data, list) and data and isinstance(data[0], dict):
-            keys = list(data[0].keys())
-            col_widths = {k: len(k) for k in keys}
+        if isinstance(data, list):
+            if not data:
+                return ""
+            if data and isinstance(data[0], dict):
+                keys = list(data[0].keys())
+                col_widths = {k: len(k) for k in keys}
 
-            for item in data:
-                for k in keys:
-                    val_len = len(str(item.get(k, "")))
-                    col_widths[k] = max(col_widths[k], val_len)
+                for item in data:
+                    for k in keys:
+                        val_len = len(str(item.get(k, "")))
+                        col_widths[k] = max(col_widths[k], val_len)
 
-            header = " | ".join(k.ljust(col_widths[k]) for k in keys)
-            separator = "-+-".join("-" * col_widths[k] for k in keys)
-            rows = []
-            for item in data:
-                row = " | ".join(str(item.get(k, "")).ljust(col_widths[k]) for k in keys)
-                rows.append(row)
+                header = " | ".join(k.ljust(col_widths[k]) for k in keys)
+                separator = "-+-".join("-" * col_widths[k] for k in keys)
+                rows = []
+                for item in data:
+                    row = " | ".join(str(item.get(k, "")).ljust(col_widths[k]) for k in keys)
+                    rows.append(row)
 
-            return "\n".join([header, separator] + rows)
+                return "\n".join([header, separator] + rows)
         return str(data)
 
     def _dict_to_text(self, data: Any, indent: int = 0) -> str:
