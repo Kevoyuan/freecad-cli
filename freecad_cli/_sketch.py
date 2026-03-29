@@ -3,6 +3,10 @@
 
 from typing import Any, Dict, List, Optional
 
+from ._mock import get_mock_state, create_mock_result
+from ._validators import MockValidators
+from ._errors import CLIErrorCode, create_error_response
+
 
 def _sketch_create_sketch(self, name: str, plane: str = "XY") -> Dict[str, Any]:
     """
@@ -43,7 +47,10 @@ def _sketch_create_sketch(self, name: str, plane: str = "XY") -> Dict[str, Any]:
             "geometry": 0
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _sketch_add_geometry(self, sketch_name: str,
@@ -72,7 +79,10 @@ def _sketch_add_geometry(self, sketch_name: str,
     try:
         sketch = doc.getObject(sketch_name)
         if not sketch:
-            return {"success": False, "error": f"Sketch not found: {sketch_name}"}
+            return create_error_response(
+                CLIErrorCode.OBJECT_NOT_FOUND,
+                name=sketch_name
+            )
 
         geo_id = -1
 
@@ -95,7 +105,10 @@ def _sketch_add_geometry(self, sketch_name: str,
             for i in range(4):
                 geo_id = sketch.addGeometry(_sketcher_module.LineSegment(*p1, *p2))
         else:
-            return {"success": False, "error": f"Unsupported geometry type: {geometry_type}"}
+            return create_error_response(
+                CLIErrorCode.OBJECT_INVALID_TYPE,
+                type=geometry_type
+            )
 
         doc.recompute()
         return {
@@ -104,20 +117,53 @@ def _sketch_add_geometry(self, sketch_name: str,
             "type": geometry_type
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _sketch_mock_result(self, category: str, name: str,
                         sub_type: str = "", params: Any = None) -> Dict[str, Any]:
-    """Return mock result"""
-    from ._mock import get_mock_state
-    get_mock_state().add(category, name, sub_type, params)
+    """Return mock result with unified format"""
+    params = params or {}
+
+    # Validate sketch parameters
+    validation_result = MockValidators.validate_sketch_params(params)
+    if not validation_result.valid:
+        return {
+            "success": False,
+            "mock": True,
+            "error_code": CLIErrorCode.VALIDATION_FAILED,
+            "error": f"Parameter validation failed: {', '.join(validation_result.errors)}",
+            "validation_errors": validation_result.errors,
+            "validation_warnings": validation_result.warnings,
+            "message": "FreeCAD not installed - validation failed"
+        }
+
+    # Add to mock state
+    mock_state = get_mock_state()
+    handle = mock_state.add(category, name, sub_type, params)
+
+    # Get bounding box for sketch (2D, so z=0)
+    plane = params.get("plane", "XY")
+    if plane == "XY":
+        bounding_box = {"x_min": 0, "x_max": 100, "y_min": 0, "y_max": 100, "z_min": 0, "z_max": 0}
+    elif plane == "XZ":
+        bounding_box = {"x_min": 0, "x_max": 100, "y_min": 0, "y_max": 0, "z_min": 0, "z_max": 100}
+    else:  # YZ
+        bounding_box = {"x_min": 0, "x_max": 0, "y_min": 0, "y_max": 100, "z_min": 0, "z_max": 100}
+
     return {
         "success": True,
         "mock": True,
         "category": category,
         "name": name,
         "type": sub_type,
+        "object_handle": handle,
         "params": params,
+        "bounding_box": bounding_box,
+        "geometry": {"area": 10000},  # Placeholder 2D area
+        "validation_warnings": validation_result.warnings,
         "message": "FreeCAD not installed - returning mock data"
     }

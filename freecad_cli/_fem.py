@@ -4,6 +4,9 @@ fem_add_boundary_condition, fem_run_analysis"""
 
 from typing import Any, Dict
 
+from ._mock import get_mock_state
+from ._errors import CLIErrorCode, create_error_response
+
 
 def _fem_create_analysis(self, name: str,
                          analysis_type: str = "static") -> Dict[str, Any]:
@@ -28,7 +31,10 @@ def _fem_create_analysis(self, name: str,
             "label": analysis.Label
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _fem_add_material(self, analysis_name: str,
@@ -50,7 +56,7 @@ def _fem_add_material(self, analysis_name: str,
     try:
         analysis = doc.getObject(analysis_name)
         if not analysis:
-            return {"success": False, "error": f"Analysis not found: {analysis_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=analysis_name)
 
         material_obj = doc.addObject("Fem::Material", f"Material_{material}")
         material_obj.Material = {"Name": material}
@@ -65,7 +71,10 @@ def _fem_add_material(self, analysis_name: str,
             "material_object": material_obj.Name
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _fem_add_bc(self, analysis_name: str, bc_type: str,
@@ -90,7 +99,7 @@ def _fem_add_bc(self, analysis_name: str, bc_type: str,
     try:
         analysis = doc.getObject(analysis_name)
         if not analysis:
-            return {"success": False, "error": f"Analysis not found: {analysis_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=analysis_name)
 
         bc = doc.addObject("Fem::Constraint", f"BC_{bc_type}")
 
@@ -105,7 +114,10 @@ def _fem_add_bc(self, analysis_name: str, bc_type: str,
             "bc_object": bc.Name
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _fem_run(self, analysis_name: str) -> Dict[str, Any]:
@@ -118,7 +130,8 @@ def _fem_run(self, analysis_name: str) -> Dict[str, Any]:
             "success": True,
             "analysis": analysis_name,
             "status": "completed",
-            "mock": True
+            "mock": True,
+            "message": "FreeCAD not installed - analysis simulated"
         }
 
     doc = self.get_document()
@@ -126,7 +139,7 @@ def _fem_run(self, analysis_name: str) -> Dict[str, Any]:
     try:
         analysis = doc.getObject(analysis_name)
         if not analysis:
-            return {"success": False, "error": f"Analysis not found: {analysis_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=analysis_name)
 
         doc.recompute()
 
@@ -136,20 +149,29 @@ def _fem_run(self, analysis_name: str) -> Dict[str, Any]:
             "status": "completed"
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _fem_mock(self, category: str, name: str,
               sub_type: str = "", params: Any = None) -> Dict[str, Any]:
-    """Return mock result"""
-    from ._mock import get_mock_state
-    get_mock_state().add(category, name, sub_type, params)
+    """Return mock result with unified format"""
+    params = params or {}
+    mock_state = get_mock_state()
+    handle = mock_state.add(category, name, sub_type, params)
+
     return {
         "success": True,
         "mock": True,
         "category": category,
         "name": name,
         "type": sub_type,
+        "object_handle": handle,
         "params": params,
+        "bounding_box": {},
+        "geometry": {},
+        "validation_warnings": [],
         "message": "FreeCAD not installed - returning mock data"
     }

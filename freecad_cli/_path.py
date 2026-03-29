@@ -3,6 +3,9 @@
 
 from typing import Any, Dict, Optional
 
+from ._mock import get_mock_state
+from ._errors import CLIErrorCode, create_error_response
+
 
 def _path_create_job(self, name: str, base_name: str) -> Dict[str, Any]:
     """Create machining job"""
@@ -17,7 +20,7 @@ def _path_create_job(self, name: str, base_name: str) -> Dict[str, Any]:
     try:
         base = doc.getObject(base_name)
         if not base:
-            return {"success": False, "error": f"Base object not found: {base_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=base_name)
 
         job = doc.addObject("Path::Job", name)
         job.Base = base
@@ -32,7 +35,10 @@ def _path_create_job(self, name: str, base_name: str) -> Dict[str, Any]:
             "label": job.Label
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _path_add_operation(self, job_name: str, operation_type: str,
@@ -55,7 +61,7 @@ def _path_add_operation(self, job_name: str, operation_type: str,
     try:
         job = doc.getObject(job_name)
         if not job:
-            return {"success": False, "error": f"Job not found: {job_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=job_name)
 
         operation = doc.addObject("Path::Feature", f"Op_{operation_type}")
         job.addObject(operation)
@@ -70,7 +76,10 @@ def _path_add_operation(self, job_name: str, operation_type: str,
             "job": job_name
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _path_export_gcode(self, job_name: str, filepath: str,
@@ -86,7 +95,8 @@ def _path_export_gcode(self, job_name: str, filepath: str,
             "job": job_name,
             "filepath": filepath,
             "post_processor": post_processor,
-            "mock": True
+            "mock": True,
+            "message": "FreeCAD not installed - export simulated"
         }
 
     doc = self.get_document()
@@ -94,7 +104,7 @@ def _path_export_gcode(self, job_name: str, filepath: str,
     try:
         job = doc.getObject(job_name)
         if not job:
-            return {"success": False, "error": f"Job not found: {job_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=job_name)
 
         _freecad_module.export([job], filepath)
 
@@ -105,20 +115,29 @@ def _path_export_gcode(self, job_name: str, filepath: str,
             "post_processor": post_processor
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.EXPORT_FAILED,
+            detail=str(e)
+        )
 
 
 def _path_mock(self, category: str, name: str,
                sub_type: str = "", params: Any = None) -> Dict[str, Any]:
-    """Return mock result"""
-    from ._mock import get_mock_state
-    get_mock_state().add(category, name, sub_type, params)
+    """Return mock result with unified format"""
+    params = params or {}
+    mock_state = get_mock_state()
+    handle = mock_state.add(category, name, sub_type, params)
+
     return {
         "success": True,
         "mock": True,
         "category": category,
         "name": name,
         "type": sub_type,
+        "object_handle": handle,
         "params": params,
+        "bounding_box": {},
+        "geometry": {},
+        "validation_warnings": [],
         "message": "FreeCAD not installed - returning mock data"
     }

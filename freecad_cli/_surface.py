@@ -3,6 +3,9 @@
 
 from typing import Any, Dict, Optional
 
+from ._mock import get_mock_state
+from ._errors import CLIErrorCode, create_error_response
+
 
 def _surface_create(self, name: str, surface_type: str,
                     params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -38,7 +41,10 @@ def _surface_create(self, name: str, surface_type: str,
         elif surface_type == "Bezier":
             obj = doc.addObject("Surface::Bezier", name)
         else:
-            return {"success": False, "error": f"Unknown surface type: {surface_type}"}
+            return create_error_response(
+                CLIErrorCode.OBJECT_INVALID_TYPE,
+                type=surface_type
+            )
 
         doc.recompute()
         return {
@@ -48,7 +54,10 @@ def _surface_create(self, name: str, surface_type: str,
             "label": obj.Label
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _surface_from_edges(self, name: str, sketch_name: str) -> Dict[str, Any]:
@@ -74,7 +83,10 @@ def _surface_from_edges(self, name: str, sketch_name: str) -> Dict[str, Any]:
     try:
         sketch = doc.getObject(sketch_name)
         if not sketch:
-            return {"success": False, "error": f"Sketch not found: {sketch_name}"}
+            return create_error_response(
+                CLIErrorCode.OBJECT_NOT_FOUND,
+                name=sketch_name
+            )
 
         obj = doc.addObject("Surface::Fill", name)
         obj.Source = sketch
@@ -87,20 +99,41 @@ def _surface_from_edges(self, name: str, sketch_name: str) -> Dict[str, Any]:
             "label": obj.Label
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _surface_mock_result(self, category: str, name: str,
                          sub_type: str = "", params: Any = None) -> Dict[str, Any]:
-    """Return mock result"""
-    from ._mock import get_mock_state
-    get_mock_state().add(category, name, sub_type, params)
+    """Return mock result with unified format"""
+    params = params or {}
+    mock_state = get_mock_state()
+    handle = mock_state.add(category, name, sub_type, params)
+
+    # Check dependencies
+    if sub_type == "from_edges":
+        sketch = params.get("sketch") if params else None
+        if sketch and not mock_state.exists(sketch):
+            return {
+                "success": False,
+                "mock": True,
+                "error_code": CLIErrorCode.DEPENDENCY_NOT_FOUND,
+                "error": f"Required sketch not found: {sketch}",
+                "message": "FreeCAD not installed - dependency check failed"
+            }
+
     return {
         "success": True,
         "mock": True,
         "category": category,
         "name": name,
         "type": sub_type,
+        "object_handle": handle,
         "params": params,
+        "bounding_box": {"x_min": 0, "x_max": 100, "y_min": 0, "y_max": 100, "z_min": 0, "z_max": 100},
+        "geometry": {"area": 10000},
+        "validation_warnings": [],
         "message": "FreeCAD not installed - returning mock data"
     }

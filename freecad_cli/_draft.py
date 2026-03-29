@@ -3,6 +3,10 @@
 
 from typing import Any, Dict, Optional
 
+from ._mock import get_mock_state
+from ._validators import MockValidators
+from ._errors import CLIErrorCode, create_error_response
+
 
 def _draft_create(self, name: str, object_type: str,
                   params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -53,7 +57,10 @@ def _draft_create(self, name: str, object_type: str,
             points = params.get("points", [(0, 0), (10, 0), (10, 10)])
             obj = _draft_module.makeWire(points, closed=params.get("closed", False))
         else:
-            return {"success": False, "error": f"Unknown Draft type: {object_type}"}
+            return create_error_response(
+                CLIErrorCode.OBJECT_INVALID_TYPE,
+                type=f"Draft {object_type}"
+            )
 
         obj.Label = name
         doc.recompute()
@@ -65,20 +72,43 @@ def _draft_create(self, name: str, object_type: str,
             "label": obj.Label
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _draft_mock_result(self, category: str, name: str,
                        sub_type: str = "", params: Any = None) -> Dict[str, Any]:
-    """Return mock result"""
-    from ._mock import get_mock_state
-    get_mock_state().add(category, name, sub_type, params)
+    """Return mock result with unified format"""
+    params = params or {}
+
+    # Validate draft parameters
+    validation_result = MockValidators.validate_draft_params(sub_type, params)
+    if not validation_result.valid:
+        return {
+            "success": False,
+            "mock": True,
+            "error_code": CLIErrorCode.VALIDATION_FAILED,
+            "error": f"Parameter validation failed: {', '.join(validation_result.errors)}",
+            "validation_errors": validation_result.errors,
+            "validation_warnings": validation_result.warnings,
+            "message": "FreeCAD not installed - validation failed"
+        }
+
+    mock_state = get_mock_state()
+    handle = mock_state.add(category, name, sub_type, params)
+
     return {
         "success": True,
         "mock": True,
         "category": category,
         "name": name,
         "type": sub_type,
+        "object_handle": handle,
         "params": params,
+        "bounding_box": {"x_min": 0, "x_max": 100, "y_min": 0, "y_max": 100, "z_min": 0, "z_max": 0},
+        "geometry": {"area": 10000},
+        "validation_warnings": validation_result.warnings,
         "message": "FreeCAD not installed - returning mock data"
     }

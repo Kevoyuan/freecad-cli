@@ -4,6 +4,9 @@
 import ast
 from typing import Any, Dict, Optional
 
+from ._mock import get_mock_state
+from ._errors import CLIErrorCode, create_error_response
+
 
 def _assembly_create(self, name: str) -> Dict[str, Any]:
     """Create assembly"""
@@ -26,7 +29,10 @@ def _assembly_create(self, name: str) -> Dict[str, Any]:
             "label": assembly.Label
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _assembly_add_part(self, assembly_name: str, part_name: str,
@@ -51,9 +57,9 @@ def _assembly_add_part(self, assembly_name: str, part_name: str,
         part = doc.getObject(part_name)
 
         if not assembly:
-            return {"success": False, "error": f"Assembly not found: {assembly_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=assembly_name)
         if not part:
-            return {"success": False, "error": f"Part not found: {part_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=part_name)
 
         assembly.addObject(part)
 
@@ -75,7 +81,10 @@ def _assembly_add_part(self, assembly_name: str, part_name: str,
             "placement": placement
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _assembly_add_constraint(self, assembly_name: str, constraint_type: str,
@@ -100,7 +109,7 @@ def _assembly_add_constraint(self, assembly_name: str, constraint_type: str,
     try:
         assembly = doc.getObject(assembly_name)
         if not assembly:
-            return {"success": False, "error": f"Assembly not found: {assembly_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=assembly_name)
 
         constraint = doc.addObject("Part::Feature", f"Constraint_{constraint_type}")
 
@@ -114,20 +123,29 @@ def _assembly_add_constraint(self, assembly_name: str, constraint_type: str,
             "object2": object2
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _asm_mock(self, category: str, name: str,
               sub_type: str = "", params: Any = None) -> Dict[str, Any]:
-    """Return mock result"""
-    from ._mock import get_mock_state
-    get_mock_state().add(category, name, sub_type, params)
+    """Return mock result with unified format"""
+    params = params or {}
+    mock_state = get_mock_state()
+    handle = mock_state.add(category, name, sub_type, params)
+
     return {
         "success": True,
         "mock": True,
         "category": category,
         "name": name,
         "type": sub_type,
+        "object_handle": handle,
         "params": params,
+        "bounding_box": {},
+        "geometry": {},
+        "validation_warnings": [],
         "message": "FreeCAD not installed - returning mock data"
     }

@@ -4,6 +4,9 @@ spreadsheet_set_formula, spreadsheet_link"""
 
 from typing import Any, Dict
 
+from ._mock import get_mock_state
+from ._errors import CLIErrorCode, create_error_response
+
 
 def _spreadsheet_create(self, name: str) -> Dict[str, Any]:
     """Create spreadsheet"""
@@ -26,7 +29,10 @@ def _spreadsheet_create(self, name: str) -> Dict[str, Any]:
             "label": sheet.Label
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _spreadsheet_set_cell(self, sheet_name: str, cell: str,
@@ -49,7 +55,7 @@ def _spreadsheet_set_cell(self, sheet_name: str, cell: str,
     try:
         sheet = doc.getObject(sheet_name)
         if not sheet:
-            return {"success": False, "error": f"Spreadsheet not found: {sheet_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=sheet_name)
 
         sheet.set(cell, str(value))
         doc.recompute()
@@ -61,7 +67,10 @@ def _spreadsheet_set_cell(self, sheet_name: str, cell: str,
             "value": value
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _spreadsheet_set_formula(self, sheet_name: str, cell: str,
@@ -84,7 +93,7 @@ def _spreadsheet_set_formula(self, sheet_name: str, cell: str,
     try:
         sheet = doc.getObject(sheet_name)
         if not sheet:
-            return {"success": False, "error": f"Spreadsheet not found: {sheet_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=sheet_name)
 
         sheet.set(cell, formula)
         doc.recompute()
@@ -96,7 +105,10 @@ def _spreadsheet_set_formula(self, sheet_name: str, cell: str,
             "formula": formula
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _spreadsheet_link(self, sheet_name: str, object_name: str,
@@ -122,9 +134,9 @@ def _spreadsheet_link(self, sheet_name: str, object_name: str,
         obj = doc.getObject(object_name)
 
         if not sheet:
-            return {"success": False, "error": f"Spreadsheet not found: {sheet_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=sheet_name)
         if not obj:
-            return {"success": False, "error": f"Object not found: {object_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=object_name)
 
         sheet.set(cell, f"{object_name}.{property_name}")
         doc.recompute()
@@ -137,20 +149,29 @@ def _spreadsheet_link(self, sheet_name: str, object_name: str,
             "cell": cell
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _ss_mock(self, category: str, name: str,
              sub_type: str = "", params: Any = None) -> Dict[str, Any]:
-    """Return mock result"""
-    from ._mock import get_mock_state
-    get_mock_state().add(category, name, sub_type, params)
+    """Return mock result with unified format"""
+    params = params or {}
+    mock_state = get_mock_state()
+    handle = mock_state.add(category, name, sub_type, params)
+
     return {
         "success": True,
         "mock": True,
         "category": category,
         "name": name,
         "type": sub_type,
+        "object_handle": handle,
         "params": params,
+        "bounding_box": {},
+        "geometry": {},
+        "validation_warnings": [],
         "message": "FreeCAD not installed - returning mock data"
     }

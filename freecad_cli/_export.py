@@ -3,6 +3,8 @@
 
 from typing import Any, Dict, List, Optional
 
+from ._errors import CLIErrorCode, create_error_response
+
 
 def _export_document(self, filepath: str, format_type: str = "STEP") -> Dict[str, Any]:
     """
@@ -20,11 +22,14 @@ def _export_document(self, filepath: str, format_type: str = "STEP") -> Dict[str
     _freecad_module = _fi._freecad_module
 
     if not FREECAD_AVAILABLE:
+        # In mock mode, just return success with mock flag
         return {
             "success": True,
             "filepath": filepath,
             "format": format_type,
-            "mock": True
+            "mock": True,
+            "objects_exported": 0,
+            "message": "FreeCAD not installed - export simulated"
         }
 
     doc = self.get_document()
@@ -39,7 +44,10 @@ def _export_document(self, filepath: str, format_type: str = "STEP") -> Dict[str
             "objects_exported": len(doc.Objects)
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.EXPORT_FAILED,
+            detail=str(e)
+        )
 
 
 def _export_get_object_info(self, object_name: str) -> Dict[str, Any]:
@@ -59,19 +67,31 @@ def _export_get_object_info(self, object_name: str) -> Dict[str, Any]:
         from ._mock import get_mock_state
         info = get_mock_state().get_info(object_name)
         if info is None:
-            return {
-                "success": False,
-                "error": f"Object not found: {object_name}",
-                "mock": True,
-            }
-        return {"success": True, "mock": True, **info}
+            return create_error_response(
+                CLIErrorCode.OBJECT_NOT_FOUND,
+                name=object_name
+            )
+        # Add error code to successful mock response
+        return {
+            "success": True,
+            "mock": True,
+            "object_handle": info.get("handle"),
+            "name": info.get("name"),
+            "label": info.get("label"),
+            "type": info.get("type"),
+            "category": info.get("category"),
+            "params": info.get("params", {}),
+        }
 
     doc = self.get_document()
 
     try:
         obj = doc.getObject(object_name)
         if not obj:
-            return {"success": False, "error": f"Object not found: {object_name}"}
+            return create_error_response(
+                CLIErrorCode.OBJECT_NOT_FOUND,
+                name=object_name
+            )
 
         info = {
             "success": True,
@@ -92,7 +112,10 @@ def _export_get_object_info(self, object_name: str) -> Dict[str, Any]:
 
         return info
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _export_list_objects(self, filter_type: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -154,6 +177,7 @@ def _export_delete_object(self, object_name: str) -> Dict[str, Any]:
             "deleted": object_name if deleted else None,
             "mock": True,
             "found": deleted,
+            "object_handle": f"mock:deleted/{object_name}",
         }
 
     doc = self.get_document()
@@ -161,9 +185,16 @@ def _export_delete_object(self, object_name: str) -> Dict[str, Any]:
     try:
         obj = doc.getObject(object_name)
         if not obj:
-            return {"success": False, "error": f"Object not found: {object_name}"}
+            return create_error_response(
+                CLIErrorCode.OBJECT_NOT_FOUND,
+                name=object_name
+            )
 
         doc.removeObject(object_name)
         return {"success": True, "deleted": object_name}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.OBJECT_DELETE_FAILED,
+            name=object_name,
+            detail=str(e)
+        )

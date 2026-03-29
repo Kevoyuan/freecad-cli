@@ -3,6 +3,9 @@
 
 from typing import Any, Dict
 
+from ._mock import get_mock_state
+from ._errors import CLIErrorCode, create_error_response
+
 
 def _inspection_create_check(self, name: str,
                              object_name: str) -> Dict[str, Any]:
@@ -18,7 +21,7 @@ def _inspection_create_check(self, name: str,
     try:
         obj = doc.getObject(object_name)
         if not obj:
-            return {"success": False, "error": f"Object not found: {object_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=object_name)
 
         check = doc.addObject("Inspection::Feature", name)
 
@@ -32,7 +35,10 @@ def _inspection_create_check(self, name: str,
             "label": check.Label
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _inspection_measure_distance(self, object1: str,
@@ -47,7 +53,8 @@ def _inspection_measure_distance(self, object1: str,
             "object1": object1,
             "object2": object2,
             "distance": 10.0,
-            "mock": True
+            "mock": True,
+            "message": "FreeCAD not installed - measurement simulated"
         }
 
     doc = self.get_document()
@@ -57,9 +64,9 @@ def _inspection_measure_distance(self, object1: str,
         obj2 = doc.getObject(object2)
 
         if not obj1:
-            return {"success": False, "error": f"Object not found: {object1}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=object1)
         if not obj2:
-            return {"success": False, "error": f"Object not found: {object2}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=object2)
 
         # Calculate distance (simplified)
         distance = 10.0
@@ -71,20 +78,29 @@ def _inspection_measure_distance(self, object1: str,
             "distance": distance
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _insp_mock(self, category: str, name: str,
                sub_type: str = "", params: Any = None) -> Dict[str, Any]:
-    """Return mock result"""
-    from ._mock import get_mock_state
-    get_mock_state().add(category, name, sub_type, params)
+    """Return mock result with unified format"""
+    params = params or {}
+    mock_state = get_mock_state()
+    handle = mock_state.add(category, name, sub_type, params)
+
     return {
         "success": True,
         "mock": True,
         "category": category,
         "name": name,
         "type": sub_type,
+        "object_handle": handle,
         "params": params,
+        "bounding_box": {},
+        "geometry": {},
+        "validation_warnings": [],
         "message": "FreeCAD not installed - returning mock data"
     }

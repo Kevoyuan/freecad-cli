@@ -4,6 +4,10 @@ create_hole, create_groove, create_revolution, create_fillet, create_chamfer"""
 
 from typing import Any, Dict, Optional, Tuple
 
+from ._mock import get_mock_state
+from ._validators import MockValidators
+from ._errors import CLIErrorCode, create_error_response
+
 
 def _partdesign_body(self, name: str) -> Dict[str, Any]:
     """Create PartDesign Body"""
@@ -26,7 +30,10 @@ def _partdesign_body(self, name: str) -> Dict[str, Any]:
             "label": obj.Label
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _partdesign_pad(self, name: str, body_name: str,
@@ -37,7 +44,7 @@ def _partdesign_pad(self, name: str, body_name: str,
     FREECAD_AVAILABLE = _fi.FREECAD_AVAILABLE
 
     if not FREECAD_AVAILABLE:
-        return _pd_mock(self, "Pad", name, "Pad",
+        return _pd_mock(self, "PartDesign", name, "Pad",
                         {"body": body_name, "sketch": sketch_name,
                          "length": length, "direction": direction})
 
@@ -48,9 +55,9 @@ def _partdesign_pad(self, name: str, body_name: str,
         sketch = doc.getObject(sketch_name)
 
         if not body:
-            return {"success": False, "error": f"Body not found: {body_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=body_name)
         if not sketch:
-            return {"success": False, "error": f"Sketch not found: {sketch_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=sketch_name)
 
         pad = doc.addObject("PartDesign::Pad", name)
         pad.Profile = sketch
@@ -73,7 +80,10 @@ def _partdesign_pad(self, name: str, body_name: str,
             "length": length
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _partdesign_pocket(self, name: str, body_name: str,
@@ -84,7 +94,7 @@ def _partdesign_pocket(self, name: str, body_name: str,
     FREECAD_AVAILABLE = _fi.FREECAD_AVAILABLE
 
     if not FREECAD_AVAILABLE:
-        return _pd_mock(self, "Pocket", name, "Pocket",
+        return _pd_mock(self, "PartDesign", name, "Pocket",
                         {"body": body_name, "sketch": sketch_name,
                          "length": length, "type": pocket_type})
 
@@ -95,9 +105,9 @@ def _partdesign_pocket(self, name: str, body_name: str,
         sketch = doc.getObject(sketch_name)
 
         if not body:
-            return {"success": False, "error": f"Body not found: {body_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=body_name)
         if not sketch:
-            return {"success": False, "error": f"Sketch not found: {sketch_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=sketch_name)
 
         pocket = doc.addObject("PartDesign::Pocket", name)
         pocket.Profile = sketch
@@ -121,7 +131,10 @@ def _partdesign_pocket(self, name: str, body_name: str,
             "pocket_type": pocket_type
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _partdesign_hole(self, name: str, body_name: str,
@@ -132,7 +145,7 @@ def _partdesign_hole(self, name: str, body_name: str,
     FREECAD_AVAILABLE = _fi.FREECAD_AVAILABLE
 
     if not FREECAD_AVAILABLE:
-        return _pd_mock(self, "Hole", name, "Hole",
+        return _pd_mock(self, "PartDesign", name, "Hole",
                          {"body": body_name, "diameter": diameter,
                           "depth": depth, "position": position})
 
@@ -141,7 +154,7 @@ def _partdesign_hole(self, name: str, body_name: str,
     try:
         body = doc.getObject(body_name)
         if not body:
-            return {"success": False, "error": f"Body not found: {body_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=body_name)
 
         hole = doc.addObject("PartDesign::Hole", name)
         hole.Diameter = diameter
@@ -164,7 +177,10 @@ def _partdesign_hole(self, name: str, body_name: str,
             "depth": depth
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _partdesign_groove(self, name: str, body_name: str,
@@ -174,7 +190,7 @@ def _partdesign_groove(self, name: str, body_name: str,
     FREECAD_AVAILABLE = _fi.FREECAD_AVAILABLE
 
     if not FREECAD_AVAILABLE:
-        return _pd_mock(self, "Groove", name, "Groove",
+        return _pd_mock(self, "PartDesign", name, "Groove",
                         {"body": body_name, "angle": angle, "radius": radius})
 
     doc = self.get_document()
@@ -182,7 +198,7 @@ def _partdesign_groove(self, name: str, body_name: str,
     try:
         body = doc.getObject(body_name)
         if not body:
-            return {"success": False, "error": f"Body not found: {body_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=body_name)
 
         groove = doc.addObject("PartDesign::Groove", name)
         groove.Angle = angle
@@ -200,7 +216,10 @@ def _partdesign_groove(self, name: str, body_name: str,
             "radius": radius
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _partdesign_revolution(self, name: str, body_name: str,
@@ -211,7 +230,7 @@ def _partdesign_revolution(self, name: str, body_name: str,
     FREECAD_AVAILABLE = _fi.FREECAD_AVAILABLE
 
     if not FREECAD_AVAILABLE:
-        return _pd_mock(self, "Revolution", name, "Revolution",
+        return _pd_mock(self, "PartDesign", name, "Revolution",
                         {"body": body_name, "sketch": sketch_name,
                          "angle": angle, "axis": axis})
 
@@ -222,9 +241,9 @@ def _partdesign_revolution(self, name: str, body_name: str,
         sketch = doc.getObject(sketch_name)
 
         if not body:
-            return {"success": False, "error": f"Body not found: {body_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=body_name)
         if not sketch:
-            return {"success": False, "error": f"Sketch not found: {sketch_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=sketch_name)
 
         revolution = doc.addObject("PartDesign::Revolution", name)
         revolution.Profile = sketch
@@ -245,7 +264,10 @@ def _partdesign_revolution(self, name: str, body_name: str,
             "angle": angle
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _partdesign_fillet(self, name: str, body_name: str,
@@ -255,7 +277,7 @@ def _partdesign_fillet(self, name: str, body_name: str,
     FREECAD_AVAILABLE = _fi.FREECAD_AVAILABLE
 
     if not FREECAD_AVAILABLE:
-        return _pd_mock(self, "Fillet", name, "Fillet",
+        return _pd_mock(self, "PartDesign", name, "Fillet",
                         {"body": body_name, "radius": edge_radius})
 
     doc = self.get_document()
@@ -263,7 +285,7 @@ def _partdesign_fillet(self, name: str, body_name: str,
     try:
         body = doc.getObject(body_name)
         if not body:
-            return {"success": False, "error": f"Body not found: {body_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=body_name)
 
         fillet = doc.addObject("PartDesign::Fillet", name)
         fillet.Radius = edge_radius
@@ -279,7 +301,10 @@ def _partdesign_fillet(self, name: str, body_name: str,
             "radius": edge_radius
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _partdesign_chamfer(self, name: str, body_name: str,
@@ -289,7 +314,7 @@ def _partdesign_chamfer(self, name: str, body_name: str,
     FREECAD_AVAILABLE = _fi.FREECAD_AVAILABLE
 
     if not FREECAD_AVAILABLE:
-        return _pd_mock(self, "Chamfer", name, "Chamfer",
+        return _pd_mock(self, "PartDesign", name, "Chamfer",
                         {"body": body_name, "size": chamfer_size})
 
     doc = self.get_document()
@@ -297,7 +322,7 @@ def _partdesign_chamfer(self, name: str, body_name: str,
     try:
         body = doc.getObject(body_name)
         if not body:
-            return {"success": False, "error": f"Body not found: {body_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=body_name)
 
         chamfer = doc.addObject("PartDesign::Chamfer", name)
         chamfer.Size = chamfer_size
@@ -313,20 +338,60 @@ def _partdesign_chamfer(self, name: str, body_name: str,
             "size": chamfer_size
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _pd_mock(self, category: str, name: str,
              sub_type: str = "", params: Any = None) -> Dict[str, Any]:
-    """Return mock result"""
-    from ._mock import get_mock_state
-    get_mock_state().add(category, name, sub_type, params)
+    """Return mock result with unified format"""
+    params = params or {}
+    mock_state = get_mock_state()
+    handle = mock_state.add(category, name, sub_type, params)
+
+    # Check dependencies
+    body_name = params.get("body") if params else None
+    if body_name and not mock_state.exists(body_name):
+        return {
+            "success": False,
+            "mock": True,
+            "error_code": CLIErrorCode.DEPENDENCY_NOT_FOUND,
+            "error": f"Required body not found: {body_name}",
+            "message": "FreeCAD not installed - dependency check failed"
+        }
+
+    # Validate parameters for features that need them
+    validation_result = MockValidators.validate_partdesign_params(sub_type, params)
+    if not validation_result.valid:
+        return {
+            "success": False,
+            "mock": True,
+            "error_code": CLIErrorCode.VALIDATION_FAILED,
+            "error": f"Parameter validation failed: {', '.join(validation_result.errors)}",
+            "validation_errors": validation_result.errors,
+            "validation_warnings": validation_result.warnings,
+            "message": "FreeCAD not installed - validation failed"
+        }
+
+    # Calculate bounding box based on feature type
+    bounding_box = {"x_min": 0, "x_max": 100, "y_min": 0, "y_max": 100, "z_min": 0, "z_max": 100}
+    if sub_type in ("Pad", "Pocket", "Revolution", "Groove"):
+        l = params.get("length", 10)
+        r = params.get("radius", 5)
+        bounding_box = {"x_min": -r, "x_max": r, "y_min": -r, "y_max": r, "z_min": 0, "z_max": l}
+
     return {
         "success": True,
         "mock": True,
         "category": category,
         "name": name,
         "type": sub_type,
+        "object_handle": handle,
         "params": params,
+        "bounding_box": bounding_box,
+        "geometry": {"volume": 1000},
+        "validation_warnings": validation_result.warnings,
         "message": "FreeCAD not installed - returning mock data"
     }

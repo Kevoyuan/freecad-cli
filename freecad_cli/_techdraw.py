@@ -4,6 +4,9 @@ techdraw_add_dimension, techdraw_export"""
 
 from typing import Any, Dict, List, Tuple
 
+from ._mock import get_mock_state
+from ._errors import CLIErrorCode, create_error_response
+
 
 def _techdraw_create_page(self, name: str,
                           template: str = "A4_Landscape") -> Dict[str, Any]:
@@ -36,7 +39,10 @@ def _techdraw_create_page(self, name: str,
             "label": page.Label if hasattr(page, 'Label') else name
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _techdraw_add_view(self, page_name: str, source_name: str,
@@ -56,9 +62,9 @@ def _techdraw_add_view(self, page_name: str, source_name: str,
         source = doc.getObject(source_name)
 
         if not page:
-            return {"success": False, "error": f"Page not found: {page_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=page_name)
         if not source:
-            return {"success": False, "error": f"Source object not found: {source_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=source_name)
 
         view = doc.addObject("TechDraw::DrawViewPart", f"View_{source_name}")
         view.Source = [source]
@@ -77,7 +83,10 @@ def _techdraw_add_view(self, page_name: str, source_name: str,
             "projection": projection_type
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _techdraw_add_dimension(self, view_name: str, dimension_type: str,
@@ -95,7 +104,7 @@ def _techdraw_add_dimension(self, view_name: str, dimension_type: str,
     try:
         view = doc.getObject(view_name)
         if not view:
-            return {"success": False, "error": f"View not found: {view_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=view_name)
 
         dim = doc.addObject("TechDraw::DrawViewDimension", f"Dim_{dimension_type}")
         dim.Type = dimension_type
@@ -114,7 +123,10 @@ def _techdraw_add_dimension(self, view_name: str, dimension_type: str,
             "view": view_name
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _techdraw_export(self, page_name: str, filepath: str,
@@ -130,7 +142,8 @@ def _techdraw_export(self, page_name: str, filepath: str,
             "page": page_name,
             "filepath": filepath,
             "format": format_type,
-            "mock": True
+            "mock": True,
+            "message": "FreeCAD not installed - export simulated"
         }
 
     doc = self.get_document()
@@ -138,7 +151,7 @@ def _techdraw_export(self, page_name: str, filepath: str,
     try:
         page = doc.getObject(page_name)
         if not page:
-            return {"success": False, "error": f"Page not found: {page_name}"}
+            return create_error_response(CLIErrorCode.OBJECT_NOT_FOUND, name=page_name)
 
         _freecad_module.export([page], filepath)
 
@@ -149,20 +162,29 @@ def _techdraw_export(self, page_name: str, filepath: str,
             "format": format_type
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.EXPORT_FAILED,
+            detail=str(e)
+        )
 
 
 def _td_mock(self, category: str, name: str,
              sub_type: str = "", params: Any = None) -> Dict[str, Any]:
-    """Return mock result"""
-    from ._mock import get_mock_state
-    get_mock_state().add(category, name, sub_type, params)
+    """Return mock result with unified format"""
+    params = params or {}
+    mock_state = get_mock_state()
+    handle = mock_state.add(category, name, sub_type, params)
+
     return {
         "success": True,
         "mock": True,
         "category": category,
         "name": name,
         "type": sub_type,
+        "object_handle": handle,
         "params": params,
+        "bounding_box": {},
+        "geometry": {},
+        "validation_warnings": [],
         "message": "FreeCAD not installed - returning mock data"
     }

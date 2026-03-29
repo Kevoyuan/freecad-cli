@@ -3,6 +3,9 @@
 
 from typing import Any, Dict
 
+from ._mock import get_mock_state
+from ._errors import CLIErrorCode, create_error_response
+
 
 def _boolean_op(self, name: str, operation: str,
                 object1: str, object2: str) -> Dict[str, Any]:
@@ -33,7 +36,10 @@ def _boolean_op(self, name: str, operation: str,
         obj2 = doc.getObject(object2)
 
         if not obj1 or not obj2:
-            return {"success": False, "error": "Specified object not found"}
+            return create_error_response(
+                CLIErrorCode.OBJECT_NOT_FOUND,
+                name=object1 if not obj1 else object2
+            )
 
         operation_map = {
             "Fuse": "Part::MultiFuse",
@@ -57,20 +63,54 @@ def _boolean_op(self, name: str, operation: str,
             "surface_area": result.Shape.Area if hasattr(result.Shape, 'Area') else 0
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _boolean_mock_result(self, category: str, name: str,
                          sub_type: str = "", params: Any = None) -> Dict[str, Any]:
-    """Return mock result"""
-    from ._mock import get_mock_state
-    get_mock_state().add(category, name, sub_type, params)
+    """Return mock result with unified format"""
+    from ._mock import create_mock_result
+
+    # Check if dependent objects exist in mock state
+    mock_state = get_mock_state()
+    obj1 = params.get("obj1") if params else None
+    obj2 = params.get("obj2") if params else None
+
+    warnings = []
+    if obj1 and not mock_state.exists(obj1):
+        return {
+            "success": False,
+            "mock": True,
+            "error_code": CLIErrorCode.DEPENDENCY_NOT_FOUND,
+            "error": f"Required object not found: {obj1}",
+            "message": "FreeCAD not installed - dependency check failed"
+        }
+    if obj2 and not mock_state.exists(obj2):
+        return {
+            "success": False,
+            "mock": True,
+            "error_code": CLIErrorCode.DEPENDENCY_NOT_FOUND,
+            "error": f"Required object not found: {obj2}",
+            "message": "FreeCAD not installed - dependency check failed"
+        }
+
+    # Calculate mock geometry (simplified)
+    # For boolean ops, we just use placeholder values
+    handle = mock_state.add(category, name, sub_type, params)
+
     return {
         "success": True,
         "mock": True,
         "category": category,
         "name": name,
         "type": sub_type,
+        "object_handle": handle,
         "params": params,
+        "bounding_box": {"x_min": 0, "x_max": 20, "y_min": 0, "y_max": 20, "z_min": 0, "z_max": 20},
+        "geometry": {"volume": 4000, "surface_area": 1200},
+        "validation_warnings": warnings,
         "message": "FreeCAD not installed - returning mock data"
     }

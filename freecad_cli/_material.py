@@ -3,6 +3,9 @@
 
 from typing import Any, Dict
 
+from ._mock import get_mock_state
+from ._errors import CLIErrorCode, create_error_response
+
 
 def _material_create(self, name: str,
                      properties: Dict[str, Any]) -> Dict[str, Any]:
@@ -29,7 +32,10 @@ def _material_create(self, name: str,
             "label": material.Label
         }
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return create_error_response(
+            CLIErrorCode.COMMAND_EXECUTE_FAILED,
+            detail=str(e)
+        )
 
 
 def _material_get_standard(self, material_name: str) -> Dict[str, Any]:
@@ -75,15 +81,21 @@ def _material_get_standard(self, material_name: str) -> Dict[str, Any]:
 
 def _mat_mock(self, category: str, name: str,
               sub_type: str = "", params: Any = None) -> Dict[str, Any]:
-    """Return mock result"""
-    from ._mock import get_mock_state
-    get_mock_state().add(category, name, sub_type, params)
+    """Return mock result with unified format"""
+    params = params or {}
+    mock_state = get_mock_state()
+    handle = mock_state.add(category, name, sub_type, params)
+
     return {
         "success": True,
         "mock": True,
         "category": category,
         "name": name,
         "type": sub_type,
+        "object_handle": handle,
         "params": params,
+        "bounding_box": {},
+        "geometry": {},
+        "validation_warnings": [],
         "message": "FreeCAD not installed - returning mock data"
     }

@@ -616,6 +616,72 @@ def export_iges(ctx, filepath):
 # Information Command Group
 # ============================================================================
 
+# ============================================================================
+# Schema Command Group
+# ============================================================================
+
+@cli.group('schema')
+def schema_group():
+    """Schema commands - AI agent command definitions"""
+    pass
+
+
+@schema_group.command('get')
+@click.option('--format', '-f',
+              type=click.Choice(['json', 'yaml']),
+              default='json',
+              help='Output format')
+@click.pass_context
+def schema_get(ctx, format):
+    """Get complete command schema"""
+    from ._schema import get_schema
+
+    schema = get_schema()
+
+    if format == 'yaml':
+        import yaml
+        output = yaml.dump(schema, default_flow_style=False)
+        click.echo(output)
+    else:
+        import json
+        click.echo(json.dumps(schema, indent=2))
+
+
+@schema_group.command('command')
+@click.option('--group', '-g', required=True, help='Command group')
+@click.option('--command', '-c', required=True, help='Command name')
+@click.pass_context
+def schema_command(ctx, group, command):
+    """Get schema for a specific command"""
+    from ._schema import get_command_schema
+
+    schema = get_command_schema(group, command)
+
+    if schema:
+        import json
+        click.echo(json.dumps({
+            "group": group,
+            "command": command,
+            "schema": schema
+        }, indent=2))
+    else:
+        output_error(ctx, f"Command not found: {group}.{command}", exit_code=EXIT_USAGE)
+
+
+@schema_group.command('list')
+@click.pass_context
+def schema_list(ctx):
+    """List all available commands"""
+    from ._schema import list_commands
+
+    commands = list_commands()
+    click.echo("\n".join(commands))
+
+
+# ============================================================================
+# Info Command Group
+# ============================================================================
+
 @cli.group('info')
 def info_group():
     """Information query commands"""

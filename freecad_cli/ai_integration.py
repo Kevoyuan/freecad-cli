@@ -37,6 +37,7 @@ class AICommandParser:
         r"创建.*?球|(make|create|add).*?sphere" : ("part", "create", {"type": "Sphere"}),
         r"创建.*?圆锥|(make|create|add).*?cone" : ("part", "create", {"type": "Cone"}),
         r"创建.*?圆环|(make|create|add).*?torus" : ("part", "create", {"type": "Torus"}),
+        r"创建.*?椭球|(make|create|add).*?ellipsoid" : ("part", "create", {"type": "Ellipsoid"}),
 
         # Sketch related
         r"创建.*?草图|(make|create|add).*?sketch" : ("sketch", "create", {}),
@@ -58,13 +59,63 @@ class AICommandParser:
         r"并集|合并|union|merge|fuse" : ("boolean", "fuse", {}),
         r"差集|减去|difference|subtract|cut" : ("boolean", "cut", {}),
         r"交集|共同|intersection|common" : ("boolean", "common", {}),
+        r"截面|section" : ("boolean", "section", {}),
 
         # Export
         r"导出.*?step|export.*?step" : ("export", "step", {}),
         r"导出.*?stl|export.*?stl" : ("export", "stl", {}),
         r"导出.*?obj|export.*?obj" : ("export", "obj", {}),
+        r"导出.*?iges|export.*?iges" : ("export", "iges", {}),
 
-        # Info
+        # PartDesign
+        r"创建.*?body|创建.*?零件|(make|create).*?body" : ("partdesign", "create-body", {}),
+        r"拉伸|创建.*?拉伸|extrude|pad" : ("partdesign", "pad", {}),
+        r"开槽|开孔|pocket|hole" : ("partdesign", "pocket", {}),
+        r"打孔|钻孔|hole" : ("partdesign", "hole", {}),
+        r"旋转|revolution" : ("partdesign", "revolution", {}),
+        r"开槽.*?旋转|groove" : ("partdesign", "groove", {}),
+        r"倒圆角|fillet|round" : ("partdesign", "fillet", {}),
+        r"倒角|chamfer" : ("partdesign", "chamfer", {}),
+
+        # Mesh
+        r"创建.*?网格|mesh" : ("mesh", "create", {}),
+        r"网格.*?从.*?形状|mesh.*?from.*?shape" : ("mesh", "from-shape", {}),
+        r"网格.*?布尔|mesh.*?boolean" : ("mesh", "boolean", {}),
+
+        # Surface
+        r"创建.*?曲面|surface" : ("surface", "create", {}),
+        r"放样|loft" : ("surface", "create", {"type": "Loft"}),
+        r"扫掠|sweep" : ("surface", "create", {"type": "Sweep"}),
+        r"曲面.*?从.*?边|surface.*?from.*?edges" : ("surface", "from-edges", {}),
+
+        # TechDraw
+        r"创建.*?图纸|techdraw.*?page" : ("techdraw", "create-page", {}),
+        r"添加.*?视图|add.*?view" : ("techdraw", "add-view", {}),
+        r"添加.*?尺寸|add.*?dimension" : ("techdraw", "add-dimension", {}),
+
+        # Spreadsheet
+        r"创建.*?电子表格|spreadsheet" : ("spreadsheet", "create", {}),
+        r"设置.*?单元格|set.*?cell" : ("spreadsheet", "set-cell", {}),
+        r"设置.*?公式|set.*?formula" : ("spreadsheet", "set-formula", {}),
+
+        # Assembly
+        r"创建.*?装配|assembly" : ("assembly", "create", {}),
+        r"添加.*?零件.*?装配|add.*?part.*?assembly" : ("assembly", "add-part", {}),
+        r"添加.*?约束|add.*?constraint" : ("assembly", "add-constraint", {}),
+
+        # Path/CAM
+        r"创建.*?加工程序|path.*?job" : ("path", "create-job", {}),
+        r"添加.*?操作|path.*?operation" : ("path", "add-operation", {}),
+        r"导出.*?gcode|export.*?gcode" : ("path", "export-gcode", {}),
+
+        # FEM
+        r"创建.*?有限元|创建.*?分析|fem.*?analysis" : ("fem", "create-analysis", {}),
+        r"添加.*?材料|fem.*?material" : ("fem", "add-material", {}),
+        r"添加.*?边界条件|fem.*?bc|fem.*?boundary" : ("fem", "add-bc", {}),
+        r"运行.*?分析|fem.*?run" : ("fem", "run", {}),
+
+        # Document
+        r"创建.*?文档|document" : ("document", "create", {}),
         r"列出.*?对象|list.*?objects?" : ("object", "list", {}),
         r"删除.*?|delete|remove" : ("object", "delete", {}),
     }
@@ -143,11 +194,20 @@ class AICommandParser:
 
 
 class BatchProcessor:
-    """Batch command processor"""
+    """Batch command processor with optional transaction support"""
 
-    def __init__(self, wrapper):
+    def __init__(self, wrapper, transactional: bool = False):
+        """
+        Initialize BatchProcessor
+
+        Args:
+            wrapper: FreeCADWrapper instance
+            transactional: If True, rollback on failure
+        """
         self.wrapper = wrapper
+        self.transactional = transactional
         self.results: List[Dict] = []
+        self.executed: List[Tuple[Dict, Dict]] = []  # (command, result) pairs
 
     def execute_batch(self, commands: List[Dict]) -> List[Dict]:
         """
@@ -160,6 +220,7 @@ class BatchProcessor:
             List of execution results
         """
         results = []
+        executed = []
 
         for cmd in commands:
             group = cmd.get("command_group")
@@ -167,47 +228,307 @@ class BatchProcessor:
             params = cmd.get("parameters", {})
 
             try:
-                if group == "part":
-                    result = self.wrapper.create_part(
-                        params.get("name", "Unnamed"),
-                        params.get("type", "Box"),
-                        params
-                    )
-                elif group == "sketch":
-                    if action == "create":
-                        result = self.wrapper.create_sketch(
-                            params.get("name", "Sketch"),
-                            params.get("plane", "XY")
-                        )
-                    elif action == "add-line":
-                        result = self.wrapper.add_sketch_geometry(
-                            params.get("sketch"), "Line", params
-                        )
-                    elif action == "add-circle":
-                        result = self.wrapper.add_sketch_geometry(
-                            params.get("sketch"), "Circle", params
-                        )
-                elif group == "draft":
-                    result = self.wrapper.create_draft_object(
-                        params.get("name", "Draft"),
-                        action,
-                        params
-                    )
-                elif group == "arch":
-                    result = self.wrapper.create_arch_object(
-                        params.get("name", "Arch"),
-                        action,
-                        params
-                    )
-                else:
-                    result = {"success": False, "error": f"Unknown command group: {group}"}
-
+                result = self._execute_single(group, action, params)
                 results.append(result)
+                executed.append((cmd, result))
+
+                if self.transactional and not result.get("success"):
+                    # Rollback on failure
+                    self._rollback(executed)
+                    results[-1] = {
+                        "success": False,
+                        "error": "Transaction rolled back",
+                        "rolled_back": True,
+                        "failed_command": cmd
+                    }
+                    break
             except Exception as e:
-                results.append({"success": False, "error": str(e)})
+                result = {"success": False, "error": str(e)}
+                results.append(result)
+                executed.append((cmd, result))
+
+                if self.transactional:
+                    self._rollback(executed)
+                    results[-1] = {
+                        "success": False,
+                        "error": "Transaction rolled back",
+                        "rolled_back": True,
+                        "failed_command": cmd
+                    }
+                    break
 
         self.results = results
+        self.executed = executed
         return results
+
+    def _execute_single(self, group: str, action: str, params: Dict) -> Dict:
+        """Execute a single command"""
+        if group == "part":
+            result = self.wrapper.create_part(
+                params.get("name", "Unnamed"),
+                params.get("type", "Box"),
+                params
+            )
+        elif group == "sketch":
+            if action == "create":
+                result = self.wrapper.create_sketch(
+                    params.get("name", "Sketch"),
+                    params.get("plane", "XY")
+                )
+            elif action == "add-line":
+                result = self.wrapper.add_sketch_geometry(
+                    params.get("sketch"), "Line", params
+                )
+            elif action == "add-circle":
+                result = self.wrapper.add_sketch_geometry(
+                    params.get("sketch"), "Circle", params
+                )
+            else:
+                result = {"success": False, "error": f"Unknown sketch action: {action}"}
+        elif group == "draft":
+            result = self.wrapper.create_draft_object(
+                params.get("name", "Draft"),
+                action,
+                params
+            )
+        elif group == "arch":
+            result = self.wrapper.create_arch_object(
+                params.get("name", "Arch"),
+                action,
+                params
+            )
+        elif group == "boolean":
+            result = self.wrapper.boolean_operation(
+                params.get("name", "Boolean"),
+                action,
+                params.get("object1"),
+                params.get("object2")
+            )
+        elif group == "mesh":
+            if action == "create":
+                result = self.wrapper.create_mesh_object(
+                    params.get("name", "Mesh"),
+                    params.get("type", "RegularMesh"),
+                    params
+                )
+            elif action == "from-shape":
+                result = self.wrapper.mesh_from_shape(
+                    params.get("name", "Mesh"),
+                    params.get("source"),
+                    params.get("deflection", 0.1)
+                )
+            elif action == "boolean":
+                result = self.wrapper.mesh_boolean(
+                    params.get("name", "Mesh"),
+                    params.get("operation"),
+                    params.get("object1"),
+                    params.get("object2")
+                )
+            else:
+                result = {"success": False, "error": f"Unknown mesh action: {action}"}
+        elif group == "surface":
+            result = self.wrapper.create_surface(
+                params.get("name", "Surface"),
+                params.get("type", "Fill"),
+                params
+            )
+        elif group == "partdesign":
+            if action == "create-body":
+                result = self.wrapper.create_partdesign_body(
+                    params.get("name", "Body")
+                )
+            elif action == "pad":
+                result = self.wrapper.create_pad(
+                    params.get("name", "Pad"),
+                    params.get("body"),
+                    params.get("sketch"),
+                    params.get("length", 10.0),
+                    params.get("direction", "Normal")
+                )
+            elif action == "pocket":
+                result = self.wrapper.create_pocket(
+                    params.get("name", "Pocket"),
+                    params.get("body"),
+                    params.get("sketch"),
+                    params.get("length", 10.0),
+                    params.get("type", "Through")
+                )
+            elif action == "hole":
+                result = self.wrapper.create_hole(
+                    params.get("name", "Hole"),
+                    params.get("body"),
+                    params.get("diameter", 5.0),
+                    params.get("depth", 10.0),
+                    params.get("position")
+                )
+            elif action == "revolution":
+                result = self.wrapper.create_revolution(
+                    params.get("name", "Revolution"),
+                    params.get("body"),
+                    params.get("sketch"),
+                    params.get("angle", 360.0)
+                )
+            elif action == "groove":
+                result = self.wrapper.create_groove(
+                    params.get("name", "Groove"),
+                    params.get("body"),
+                    params.get("angle", 360.0),
+                    params.get("radius", 5.0)
+                )
+            elif action == "fillet":
+                result = self.wrapper.create_fillet(
+                    params.get("name", "Fillet"),
+                    params.get("body"),
+                    params.get("radius", 2.0)
+                )
+            elif action == "chamfer":
+                result = self.wrapper.create_chamfer(
+                    params.get("name", "Chamfer"),
+                    params.get("body"),
+                    params.get("size", 1.0)
+                )
+            else:
+                result = {"success": False, "error": f"Unknown partdesign action: {action}"}
+        elif group == "techdraw":
+            if action == "create-page":
+                result = self.wrapper.techdraw_create_page(
+                    params.get("name", "Page"),
+                    params.get("template", "A4_Landscape")
+                )
+            elif action == "add-view":
+                result = self.wrapper.techdraw_add_view(
+                    params.get("page"),
+                    params.get("source"),
+                    params.get("projection", "FirstAngle")
+                )
+            elif action == "add-dimension":
+                result = self.wrapper.techdraw_add_dimension(
+                    params.get("view"),
+                    params.get("type", "Horizontal"),
+                    []
+                )
+            elif action == "export":
+                result = self.wrapper.techdraw_export(
+                    params.get("page"),
+                    params.get("filepath"),
+                    params.get("format", "PDF")
+                )
+            else:
+                result = {"success": False, "error": f"Unknown techdraw action: {action}"}
+        elif group == "spreadsheet":
+            if action == "create":
+                result = self.wrapper.spreadsheet_create(
+                    params.get("name", "Spreadsheet")
+                )
+            elif action == "set-cell":
+                result = self.wrapper.spreadsheet_set_cell(
+                    params.get("sheet"),
+                    params.get("cell"),
+                    params.get("value")
+                )
+            elif action == "set-formula":
+                result = self.wrapper.spreadsheet_set_formula(
+                    params.get("sheet"),
+                    params.get("cell"),
+                    params.get("formula")
+                )
+            else:
+                result = {"success": False, "error": f"Unknown spreadsheet action: {action}"}
+        elif group == "assembly":
+            if action == "create":
+                result = self.wrapper.assembly_create(
+                    params.get("name", "Assembly")
+                )
+            elif action == "add-part":
+                result = self.wrapper.assembly_add_part(
+                    params.get("assembly"),
+                    params.get("part"),
+                    params.get("placement", "[0, 0, 0]")
+                )
+            elif action == "add-constraint":
+                result = self.wrapper.assembly_add_constraint(
+                    params.get("assembly"),
+                    params.get("type"),
+                    params.get("object1"),
+                    params.get("object2")
+                )
+            else:
+                result = {"success": False, "error": f"Unknown assembly action: {action}"}
+        elif group == "path":
+            if action == "create-job":
+                result = self.wrapper.path_create_job(
+                    params.get("name", "Job"),
+                    params.get("base")
+                )
+            elif action == "add-operation":
+                result = self.wrapper.path_add_operation(
+                    params.get("job"),
+                    params.get("type", "Drill")
+                )
+            elif action == "export-gcode":
+                result = self.wrapper.path_export_gcode(
+                    params.get("job"),
+                    params.get("filepath"),
+                    params.get("post", "linuxcnc")
+                )
+            else:
+                result = {"success": False, "error": f"Unknown path action: {action}"}
+        elif group == "fem":
+            if action == "create-analysis":
+                result = self.wrapper.fem_create_analysis(
+                    params.get("name", "Analysis"),
+                    params.get("type", "static")
+                )
+            elif action == "add-material":
+                result = self.wrapper.fem_add_material(
+                    params.get("analysis"),
+                    params.get("material", "Steel")
+                )
+            elif action == "add-bc":
+                result = self.wrapper.fem_add_boundary_condition(
+                    params.get("analysis"),
+                    params.get("type"),
+                    params.get("object"),
+                    {}
+                )
+            elif action == "run":
+                result = self.wrapper.fem_run_analysis(
+                    params.get("analysis")
+                )
+            else:
+                result = {"success": False, "error": f"Unknown fem action: {action}"}
+        elif group == "export":
+            result = self.wrapper.export_document(
+                params.get("filepath"),
+                action.upper()
+            )
+        elif group == "document":
+            if action == "create":
+                result = self.wrapper.initialize()
+            else:
+                result = {"success": False, "error": f"Unknown document action: {action}"}
+        elif group == "object":
+            if action == "delete":
+                result = self.wrapper.delete_object(params.get("name"))
+            elif action == "list":
+                result = {"success": True, "objects": self.wrapper.list_objects()}
+            else:
+                result = {"success": False, "error": f"Unknown object action: {action}"}
+        else:
+            result = {"success": False, "error": f"Unknown command group: {group}"}
+
+        return result
+
+    def _rollback(self, executed: List[Tuple[Dict, Dict]]) -> None:
+        """Rollback executed commands in reverse order"""
+        for cmd, result in reversed(executed):
+            if result.get("success") and "object_handle" in result:
+                # Try to delete the created object
+                try:
+                    handle = result["object_handle"]
+                    self.wrapper.delete_object(handle)
+                except Exception:
+                    pass  # Best effort rollback
 
     def get_summary(self) -> Dict[str, Any]:
         """Get batch execution summary"""
@@ -215,11 +536,15 @@ class BatchProcessor:
             return {"total": 0, "success": 0, "failed": 0}
 
         success_count = sum(1 for r in self.results if r.get("success"))
+        rolled_back = any(r.get("rolled_back") for r in self.results if isinstance(r, dict))
+
         return {
             "total": len(self.results),
             "success": success_count,
             "failed": len(self.results) - success_count,
-            "success_rate": success_count / len(self.results) * 100
+            "success_rate": success_count / len(self.results) * 100 if self.results else 0,
+            "rolled_back": rolled_back,
+            "transactional": self.transactional
         }
 
 
