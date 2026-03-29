@@ -37,7 +37,7 @@ freecad-cli --help
 ### From source
 
 ```bash
-git clone https://github.com/MiniMax-AI/freecad-cli.git
+git clone https://github.com/Kevoyuan/freecad-cli.git
 cd freecad-cli
 pip install -e .
 ```

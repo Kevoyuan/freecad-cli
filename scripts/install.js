@@ -45,4 +45,4 @@ console.log('Installation complete!');
 console.log('\nUsage:');
 console.log('  npx freecad-cli --help');
 console.log('  npm exec -- freecad-cli -- --help');
-console.log('\nFor more options, see: https://github.com/MiniMax-AI/freecad-cli');
+console.log('\nFor more options, see: https://github.com/Kevoyuan/freecad-cli');
