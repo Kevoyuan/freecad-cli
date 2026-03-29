@@ -503,4 +503,4 @@ LGPL 2.1+
 
 ## Contact
 
-- GitHub Issues: https://github.com/MiniMax-AI/freecad-cli/issues
+- GitHub Issues: https://github.com/Kevoyuan/freecad-cli/issues

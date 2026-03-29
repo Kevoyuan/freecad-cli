@@ -505,4 +505,4 @@ LGPL 2.1+
 
 ## 联系方式
 
-- GitHub Issues: https://github.com/MiniMax-AI/freecad-cli/issues
+- GitHub Issues: https://github.com/Kevoyuan/freecad-cli/issues
