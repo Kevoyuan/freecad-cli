@@ -35,7 +35,10 @@ def _export_document(self, filepath: str, format_type: str = "STEP") -> Dict[str
     doc = self.get_document()
 
     try:
-        _freecad_module.export(doc.Objects, filepath)
+        # Use Part.export which works across FreeCAD versions
+        # FreeCAD 1.x removed FreeCAD.export()
+        import Part as _part_module
+        _part_module.export(doc.Objects, filepath)
 
         return {
             "success": True,
