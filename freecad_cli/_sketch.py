@@ -30,13 +30,18 @@ def _sketch_create_sketch(self, name: str, plane: str = "XY") -> Dict[str, Any]:
     try:
         obj = doc.addObject("Sketcher::SketchObject", name)
 
-        # Set sketch plane
+        # Set sketch placement based on plane
+        # FreeCAD 1.x removed Support attribute — use Placement instead
         if plane == "XY":
-            obj.Support = [(doc.getObject("XY_Plane"), '')]
+            pass  # Default XY plane, no placement change needed
         elif plane == "XZ":
-            obj.Support = [(doc.getObject("XZ_Plane"), '')]
+            import FreeCAD as fc
+            rot = fc.Rotation(fc.Vector(1, 0, 0), 90)  # Rotate to XZ plane
+            obj.Placement = fc.Placement(fc.Vector(0, 0, 0), rot)
         elif plane == "YZ":
-            obj.Support = [(doc.getObject("YZ_Plane"), '')]
+            import FreeCAD as fc
+            rot = fc.Rotation(fc.Vector(0, 1, 0), -90)  # Rotate to YZ plane
+            obj.Placement = fc.Placement(fc.Vector(0, 0, 0), rot)
 
         doc.recompute()
         return {

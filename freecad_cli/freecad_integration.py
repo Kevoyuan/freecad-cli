@@ -12,6 +12,7 @@ Architecture: domain methods are split into private sub-modules
 """
 
 import sys
+import os
 import ast
 import threading
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -35,6 +36,61 @@ _path_module = None
 _fem_module = None
 _image_module = None
 
+# Common FreeCAD installation paths per platform
+_FREECAD_PATHS = {
+    "darwin": "/Applications/FreeCAD.app/Contents/Resources",
+    "linux": "/usr/lib/freecad-python3",
+    "win32": r"C:\Program Files\FreeCAD 0.19\bin",
+}
+
+
+def _configure_freecad_env() -> bool:
+    """
+    Auto-detect and configure FreeCAD environment variables.
+
+    FreeCAD's Python modules are bundled in the app/Resources/lib directory,
+    not in the standard Python path. This function tries common install locations
+    and sets up the environment so FreeCAD can be imported.
+
+    Returns:
+        True if FreeCAD environment was auto-configured, False otherwise.
+    """
+    import platform
+
+    system = platform.system().lower()
+    freecad_base = _FREECAD_PATHS.get(system)
+
+    if not freecad_base or not Path(freecad_base).exists():
+        # Try to find FreeCAD.app on macOS
+        if system == "darwin":
+            app_path = Path("/Applications/FreeCAD.app/Contents/Resources")
+            if app_path.exists():
+                freecad_base = str(app_path)
+
+    if not freecad_base or not Path(freecad_base).exists():
+        return False
+
+    lib_dir = Path(freecad_base) / "lib"
+    if not lib_dir.exists():
+        return False
+
+    # Add lib directory to PYTHONPATH if not already there
+    if str(lib_dir) not in sys.path:
+        sys.path.insert(0, str(lib_dir))
+
+    # Set library path for dynamic linker (Linux/macOS)
+    if system == "darwin":
+        os.environ.setdefault("DYLD_LIBRARY_PATH", str(lib_dir))
+        os.environ.setdefault("LD_LIBRARY_PATH", str(lib_dir))
+    elif system == "linux":
+        os.environ.setdefault("LD_LIBRARY_PATH", str(lib_dir))
+
+    # Set PYTHONHOME if not set
+    os.environ.setdefault("PYTHONHOME", freecad_base)
+    os.environ.setdefault("PYTHONPATH", str(lib_dir))
+
+    return True
+
 
 def check_freecad() -> bool:
     """Check if FreeCAD is available"""
@@ -47,12 +103,13 @@ def check_freecad() -> bool:
         if FREECAD_AVAILABLE:
             return True
 
+        # Auto-configure FreeCAD environment (sets PYTHONPATH, library paths)
+        _configure_freecad_env()
+
         try:
             import FreeCAD as fc
             import Part
-            import Draft
             import Sketcher
-            import Arch
             import Mesh
             import Surface
 
@@ -61,17 +118,38 @@ def check_freecad() -> bool:
             if isinstance(version, tuple):
                 if version < (0, 19, 0):
                     return False
+            elif isinstance(version, list):
+                # FreeCAD 1.x returns ['major', 'minor', 'patch', ...]
+                try:
+                    major, minor, patch = int(version[0]), int(version[1]), int(version[2])
+                    if (major, minor, patch) < (0, 19, 0):
+                        return False
+                except (ValueError, IndexError):
+                    # If we can't parse version, assume it's recent enough
+                    pass
             else:
+                # String version
                 if version < "0.19.0":
                     return False
 
             _freecad_module = fc
             _part_module = Part
-            _draft_module = Draft
-            _arch_module = Arch
             _sketcher_module = Sketcher
             _mesh_module = Mesh
             _surface_module = Surface
+
+            # Draft and Arch require PySide6/Qt GUI bindings — optional for CLI
+            try:
+                import Draft
+                _draft_module = Draft
+            except ImportError:
+                _draft_module = None
+
+            try:
+                import Arch
+                _arch_module = Arch
+            except ImportError:
+                _arch_module = None
 
             # Try to import optional modules
             try:
@@ -207,9 +285,8 @@ class FreeCADWrapper:
             }
 
         try:
-            if self.headless:
-                self._doc = _freecad_module.newDocument("CLI_Document")
-            else:
+            # Reuse existing document if already initialized
+            if self._doc is None:
                 self._doc = _freecad_module.newDocument("CLI_Document")
 
             self._initialized = True

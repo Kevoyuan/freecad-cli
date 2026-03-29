@@ -49,9 +49,24 @@ def _boolean_op(self, name: str, operation: str,
         }
 
         result = doc.addObject(operation_map.get(operation, "Part::Fuse"), name)
-        result.Shape = getattr(_part_module, operation)(
-            obj1.Shape, obj2.Shape
-        )
+
+        # FreeCAD 1.x uses .fuse()/.cut()/.common() methods on Shape
+        # Map operation names to Shape methods
+        shape_method_map = {
+            "Fuse": "fuse",
+            "Cut": "cut",
+            "Common": "common",
+            "Section": "section"
+        }
+
+        method_name = shape_method_map.get(operation, "fuse")
+        try:
+            result.Shape = getattr(obj1.Shape, method_name)(obj2.Shape)
+        except AttributeError:
+            # Fallback: try Part module functions (older FreeCAD)
+            result.Shape = getattr(_part_module, operation)(
+                obj1.Shape, obj2.Shape
+            )
 
         doc.recompute()
 
