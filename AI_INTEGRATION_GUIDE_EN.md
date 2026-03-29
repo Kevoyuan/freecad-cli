@@ -15,6 +15,23 @@ This document describes how to integrate AI systems with FreeCAD CLI.
 
 ## Basic Usage
 
+### Environment Requirements
+
+freecad-cli auto-detects FreeCAD paths on macOS (`/Applications/FreeCAD.app/Contents/Resources`) and Linux (`/usr/lib/freecad-python3`). If your AI system calls the CLI and gets `"freecad_available": false`, configure the FreeCAD path first:
+
+```bash
+# macOS
+export PYTHONPATH=/Applications/FreeCAD.app/Contents/Resources/lib:$PYTHONPATH
+export DYLD_LIBRARY_PATH=/Applications/FreeCAD.app/Contents/Resources/lib:$DYLD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/Applications/FreeCAD.app/Contents/Resources/lib:$LD_LIBRARY_PATH
+export PYTHONHOME=/Applications/FreeCAD.app/Contents/Resources
+
+# Linux
+export PYTHONPATH=/usr/lib/freecad-python3:$PYTHONPATH
+export LD_LIBRARY_PATH=/usr/lib/freecad-python3:$LD_LIBRARY_PATH
+export PYTHONHOME=/usr
+```
+
 ### Shell Commands
 
 All CLI commands support JSON output for easy AI parsing:

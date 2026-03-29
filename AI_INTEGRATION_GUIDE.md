@@ -15,6 +15,23 @@
 
 ## 基础调用方式
 
+### 环境要求
+
+freecad-cli 会自动检测 FreeCAD 路径（macOS: `/Applications/FreeCAD.app/Contents/Resources`，Linux: `/usr/lib/freecad-python3`）。如果 AI 系统调用时遇到 `"freecad_available": false`，需要先在执行环境中配置 FreeCAD 路径：
+
+```bash
+# macOS
+export PYTHONPATH=/Applications/FreeCAD.app/Contents/Resources/lib:$PYTHONPATH
+export DYLD_LIBRARY_PATH=/Applications/FreeCAD.app/Contents/Resources/lib:$DYLD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/Applications/FreeCAD.app/Contents/Resources/lib:$LD_LIBRARY_PATH
+export PYTHONHOME=/Applications/FreeCAD.app/Contents/Resources
+
+# Linux
+export PYTHONPATH=/usr/lib/freecad-python3:$PYTHONPATH
+export LD_LIBRARY_PATH=/usr/lib/freecad-python3:$LD_LIBRARY_PATH
+export PYTHONHOME=/usr
+```
+
 ### Shell 调用
 
 所有 CLI 命令都支持 JSON 输出，便于 AI 解析：

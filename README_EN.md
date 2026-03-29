@@ -17,7 +17,7 @@ FreeCAD command-line interface — gives AI systems full access to FreeCAD CAD f
 ### Prerequisites
 
 - Python 3.8+
-- FreeCAD 0.19+ (FreeCAD Python module must be installed)
+- FreeCAD 0.19+ / 1.x
 - Node.js 16+ (for npm installation)
 
 ### npm (recommended)
@@ -41,6 +41,46 @@ git clone https://github.com/Kevoyuan/freecad-cli.git
 cd freecad-cli
 pip install -e .
 ```
+
+### FreeCAD Environment Setup
+
+freecad-cli **auto-detects** FreeCAD installation paths on macOS and Linux — no manual configuration is needed in most cases.
+
+**Supported systems (auto-detected):**
+- macOS: `/Applications/FreeCAD.app/Contents/Resources`
+- Linux: `/usr/lib/freecad-python3`
+
+**If auto-detection fails** (non-standard install path), set environment variables manually:
+
+```bash
+# macOS
+export FREECAD_PATH=/Applications/FreeCAD.app/Contents/Resources
+export PYTHONPATH=$FREECAD_PATH/lib:$PYTHONPATH
+export DYLD_LIBRARY_PATH=$FREECAD_PATH/lib:$DYLD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$FREECAD_PATH/lib:$LD_LIBRARY_PATH
+export PYTHONHOME=$FREECAD_PATH
+
+# Linux
+export FREECAD_PATH=/path/to/freecad
+export PYTHONPATH=$FREECAD_PATH/lib:$PYTHONPATH
+export LD_LIBRARY_PATH=$FREECAD_PATH/lib:$LD_LIBRARY_PATH
+export PYTHONHOME=$FREECAD_PATH
+
+# Windows (PowerShell)
+$env:FREECAD_PATH="C:\Program Files\FreeCAD 0.19\bin"
+$env:PYTHONPATH="$env:FREECAD_PATH;$env:PYTHONPATH"
+$env:PYTHONHOME="$env:FREECAD_PATH"
+```
+
+Verify installation:
+```bash
+freecad-cli info status
+# Expected: "freecad_available": true
+```
+
+**Known limitations:**
+- Draft and Arch modules require PySide6 (Qt GUI bindings) — unavailable in headless mode
+- FreeCAD 1.x and 0.19.x have minor API differences — CLI handles compatibility
 
 ## Quick Start
 
