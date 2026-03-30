@@ -255,6 +255,9 @@ from ._inspection import _inspection_create_check, _inspection_measure_distance
 class FreeCADWrapper:
     """FreeCAD functionality wrapper class"""
 
+    # Cache TTL in seconds - short enough for responsiveness, long enough to avoid repeated doc traversal
+    _OBJECTS_CACHE_TTL = 1.0
+
     def __init__(self, headless: bool = True):
         """
         Initialize FreeCAD wrapper
@@ -265,6 +268,9 @@ class FreeCADWrapper:
         self.headless = headless
         self._doc = None
         self._initialized = False
+        # Objects list cache to avoid expensive doc.Objects traversal on every call
+        self._objects_cache = {}  # key: filter_type (None for all), value: (list, timestamp)
+        self._objects_cache_lock = threading.Lock()
 
     # -------------------------------------------------------------------------
     # Core / Document
@@ -441,6 +447,33 @@ class FreeCADWrapper:
         except:
             pass
         return {}
+
+    def _invalidate_objects_cache(self):
+        """Invalidate the objects list cache - call after creating or deleting objects"""
+        with self._objects_cache_lock:
+            self._objects_cache.clear()
+
+    def _get_cached_objects(self, filter_type: Optional[str]) -> Tuple[Optional[List], bool]:
+        """
+        Get cached objects list if valid.
+
+        Returns:
+            Tuple of (cached_list or None, is_valid)
+        """
+        import time
+        with self._objects_cache_lock:
+            cache_key = filter_type
+            if cache_key in self._objects_cache:
+                cached_list, timestamp = self._objects_cache[cache_key]
+                if time.time() - timestamp < self._OBJECTS_CACHE_TTL:
+                    return cached_list, True
+            return None, False
+
+    def _set_cached_objects(self, filter_type: Optional[str], objects: List):
+        """Store objects list in cache"""
+        import time
+        with self._objects_cache_lock:
+            self._objects_cache[filter_type] = (objects, time.time())
 
     # -------------------------------------------------------------------------
     # Public document operations (imported from _export)

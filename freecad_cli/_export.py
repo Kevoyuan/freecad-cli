@@ -138,9 +138,16 @@ def _export_list_objects(self, filter_type: Optional[str] = None) -> List[Dict[s
         from ._mock import get_mock_state
         return get_mock_state().list_objects(filter_type)
 
+    # Check cache first (only for exact filter_type match including None)
+    cached_result, is_valid = self._get_cached_objects(filter_type)
+    if is_valid:
+        return cached_result
+
     doc = self.get_document()
     objects = []
 
+    # Build object info without accessing Shape in the hot loop
+    # Shape access triggers lazy evaluation and can be very expensive
     for obj in doc.Objects:
         if filter_type and filter_type not in obj.TypeId:
             continue
@@ -151,10 +158,14 @@ def _export_list_objects(self, filter_type: Optional[str] = None) -> List[Dict[s
             "type": obj.TypeId
         }
 
-        if hasattr(obj, 'Shape') and obj.Shape:
-            obj_info["has_geometry"] = True
+        # Note: We intentionally skip has_geometry check here for performance.
+        # Accessing obj.Shape can trigger expensive recomputation.
+        # If has_geometry is truly needed, callers should call get_object_info separately.
 
         objects.append(obj_info)
+
+    # Store in cache
+    self._set_cached_objects(filter_type, objects)
 
     return objects
 
@@ -194,6 +205,10 @@ def _export_delete_object(self, object_name: str) -> Dict[str, Any]:
             )
 
         doc.removeObject(object_name)
+
+        # Invalidate objects cache after deletion
+        self._invalidate_objects_cache()
+
         return {"success": True, "deleted": object_name}
     except Exception as e:
         return create_error_response(
